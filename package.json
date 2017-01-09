@@ -1,0 +1,23 @@
+{
+  "name": "jira-enhancer",
+  "version": "0.0.1",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-bower-files": "^0.2.7",
+    "gulp-concat": "^2.6.1",
+    "gulp-filter": "^4.0.0",
+    "gulp-less": "^3.3.0",
+    "gulp-load-plugins": "^1.4.0",
+    "gulp-main-bower-files": "^1.6.1",
+    "gulp-order": "^1.1.1",
+    "merge-stream": "^1.0.1"
+  },
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Magnus Siverbrant",
+  "license": "MIT"
+}

@@ -1,0 +1,39 @@
+{
+    "name": "Jira flow companion (beta)",
+
+    "version": "0.0.1",
+    "manifest_version": 2,
+    
+    "permissions": [
+        "unlimitedStorage",
+        "tabs"
+    ],
+
+     "content_security_policy": "script-src 'self' 'unsafe-eval' https://ssl.google-analytics.com; object-src 'self'",
+
+    "background":
+        {
+            "scripts": [
+                        "/utils_js/lodash.js",
+                        "utils_js/util.js",
+                        "background/background.js"],
+            "persistent": false
+        },
+
+     "content_scripts": [
+    	{
+        	"matches": [
+                        "http://*/secure/RapidBoard.jspa?*cumulativeFlowDiagram*",
+                        "https://*/secure/RapidBoard.jspa?*cumulativeFlowDiagram*"
+                       ],
+            "js": [
+                    "utils_js/jquery-2.1.1.min.js",
+                    "utils_js/lodash.js",
+                    "utils_js/util.js",
+                    "contentScripts/trigger.js"
+                  ]
+    	}
+     ]
+
+    
+}

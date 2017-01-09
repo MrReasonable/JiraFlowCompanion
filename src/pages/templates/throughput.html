@@ -1,0 +1,64 @@
+<div class="container">
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="well">
+        <h4>Througput! (BETA)</h4>
+        
+      </div>
+      
+      
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-lg-12">
+			<nvd3 options="options" data="data" config="config" ng-show="hasData"></nvd3>
+		</div>
+	</div>
+  <div class="row">
+    <div class="col-me-2"> 
+      
+    
+    <div class="row">
+      
+        <div class="col-md-4">
+            <label>Start date:</label>
+						<p class="input-group">
+              
+							<input type="text" class="form-control" datepicker-popup="yyyy-MM-dd" ng-model="dt"  ng-change="startDateChanged()" is-open="opened" min-date="start" max-date="today" ng-required="true" close-text="Close" />
+              <span class="input-group-btn">
+                <button type="button" class="btn btn-default" ng-click="open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
+              </span>
+            </p>
+        </div>
+				<div class="col-md-4">
+						<div class="form-group">
+      				<label>SprintLength(weeks):</label>
+      				<select class="form-control" ng-model="sprintLength" ng-change="updateSprintLength()" >
+								<option value=1 ng-selected="sprintLength===1" >1 week</option>
+								<option value=2 ng-selected="sprintLength===2">2 weeks</option>
+								<option value=4 ng-selected="sprintLength===4">4 weeks</option>
+							</select>
+
+    		    </div>
+				</div>	
+    </div>
+		<div class="row">
+			<div class="col-md-8">
+          <form class="form-inline">  
+						<div class="form-group">
+      					<label class="">Export Data as:</label>
+      					<button type="button" class="btn btn-default navbar-btn form-control" ng-click="downloadAsCSV()">CSV</button>
+								<button type="button" class="btn btn-default navbar-btn form-control" ng-click="downloadAsJson()">JSON</button >
+  					</div>
+          </form>
+        </div>
+		</div>
+    <div class="row">
+  		<div class="col-sm-4">
+				<a href="{{board}}">Data from rest api source </a>
+			</div>
+		</div>
+  </div>
+	</div>
+</div>

@@ -1,0 +1,42 @@
+<div id="report" class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="well">
+                <h1>Flow report (BETA)</h1>
+                <a href="{{board}}">Source {{board}}</a>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="input-group">
+            <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsJson()">Download as JSON</button>
+            <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsCSV()">Download as CSV</button>
+            <input type="text" class="form-control" placeholder="filter" ng-model="filterText" >
+        </div>
+    </div>
+    <div class="row">
+
+    </div>
+    <div class="row">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                <tr><th>Id</th><td>Title</th><th>Lane</th><th class="timestamp">First seen</th><th class="timestamp">Last seen</th></tr>
+                </thead>
+                <tbody>
+
+                <tr ng-repeat="row in flowReportData() |filter:showRow(filterText)">
+                    <td >{{ row[0] }}</td>
+                    <td ><a href="{{row[2]}}">{{ row[1] }}</a></td>
+                    <td >{{ row[3] }}</td>
+                    <td >{{ row[4] }}</td>
+                    <td >{{ row[5] }}</td>
+
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

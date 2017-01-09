@@ -1,0 +1,65 @@
+<div id="cycletime" class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="well">
+                <h1>Cycletime (BETA)</h1>
+                <a href="{{board}}">Source {{board}}</a>
+            </div>
+
+
+        </div>
+    </div>
+    <div class="row">
+        <span class="col-lg-3">StartLane</span>
+        <span class="col-lg-3">EndLane</span>
+    </div>
+    <div class="row">
+        <!-- Single button -->
+        <div class="btn-group col-lg-3" dropdown is-open="startStatus.isopen">
+            <button type="button" class="btn btn-default dropdown-toggle btn-block" dropdown-toggle >
+                {{startLane}} <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li ng-repeat="header in laneHeaders"><a ng-click="setStartLane(header)">{{header}}</a></li>
+            </ul>
+        </div>
+
+        <div class="btn-group col-lg-3" dropdown is-open="endStatus.isopen">
+            <button type="button" class="btn btn-default dropdown-toggle btn-block" dropdown-toggle >
+                {{endLane}} <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li ng-repeat="header in laneHeaders"><a ng-click="setEndLane(header)">{{header}}</a></li>
+            </ul>
+        </div>
+        <div class="col-md-2">
+            <div class="text-input">
+                <input type="text" class="form-control" placeholder="filter" ng-model="filterText" >
+            </div>
+        </div>
+        <div class="col-md-3">
+            <a ng-click="downloadAsCSV()" class="btn btn-default" id="csv">Export to excel</a>
+        </div>
+        <!--div class="col-md-2">
+            <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsJson()">JSON</button>
+
+        </div-->
+    </div>
+    <div class="table-responsive">
+        <table ng-if="lane.tickets.length!==0" class="table" id="cycletable">
+            <thead>
+            <tr><th>Id</th><th>Title</th><th style="width:150px;">{{startLane}}</th><th style="width:150px;">{{endLane}}</th><th style="width:150px;">Cycletime</th></tr>
+            </thead>
+            <tbody>
+
+            <tr ng-repeat="ticket in cycletimes | orderBy : 'end' : true | filter:showTicket(filterText)">
+                <td >{{ ticket.id }}</td>
+                <td ><a href="{{ticket.url()}}">{{ ticket.title }}</a></td>
+                <td class="timestamp">{{ ticket.start| date : "yyyy-MM-dd" }}</td>
+                <td class="timestamp">{{ ticket.end| date : "yyyy-MM-dd" }}</td>
+                <td class="timestamp">{{ ticket.cycleTime|days }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,37 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jira Kanban Data</title>
+
+    <!-- Bootstrap -->
+    <link href="../lib/css/deps.css" rel="stylesheet">
+	
+
+  </head>
+  <body ng-app="kanban">
+  	<div ng-controller = "TabController">
+  		<tabset >
+    		<tab ng-repeat="tab in tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="goTo(tab.route)"></tab>
+		</tabset>
+	</div>
+  	<div ng-view></div>
+  	
+    
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <!--script src="../utils_js/jquery-2.1.1.min.js"></script-->
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+ 
+	<script type="text/javascript" src="../lib/js/deps.js"></script>
+	<script type="text/javascript" src="../utils_js/util.js"></script>
+	<script type="text/javascript" src="../cfdParser.js"></script>
+	
+	
+	
+	<script type="text/javascript" src="spa.js"></script>
+    <script type="text/javascript" src="analytics.js"></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+<div id="report" class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="well">
+                <h1>Flow Data Grid (BETA)</h1>
+                <a href="{{board}}">Source {{board}}</a>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="input-group">
+            <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsJson()">Download as JSON</button>
+            <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsCSV()">Download as CSV</button>
+            <input type="text" class="form-control" placeholder="filter" ng-model="filterText" >
+        </div>
+    </div>
+    <div class="row">
+
+    </div>
+    <div class="row" style"overflow=scroll">
+        <div class="table-responsive">
+            <table class="table" id="fdg" style="width:{{600+flowDataGrid[0].length*130}}px;">
+                <!--thead-->
+                <!--/thead-->
+                <tbody>
+                <tr><td ng-repeat="cell in header track by $index "  class="{{($index>1)?'timestamp':''}}">{{ cell }}</td></tr>
+                <tr ng-repeat="row in flowDataGridData() | filter:showRow(filterText)">
+                    <td ng-repeat="cell in row track by $index "  class="{{($index>1)?'timestamp':''}}">{{ cell }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+
+

@@ -1,0 +1,1 @@
+{"tickets":{"ABC-1":{"id":"ABC-1","columnChanges":{"172800000":{"id":"ABC-1","column":"column1","enter":172800000},"345600000":{"id":"ABC-1","column":"column2","enter":345600000}}}},"boardCreated":172800000,"latestChange":345600000}
