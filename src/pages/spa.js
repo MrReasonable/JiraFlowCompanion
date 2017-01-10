@@ -1,4 +1,6 @@
 //spa.js
+
+
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
@@ -48,17 +50,21 @@ app.factory("boardDataFactory", function () {
     return factory;
 });
 
-
+app.factory("sharedState",function(){
+    var state = {
+        "startTime": new Date().getTime()-365*timeUtil.MILLISECONDS_DAY,
+    }
+    return state;
+});
 
 app.controller("SpectralController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory'
-                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput) {
+                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory',"sharedState"
+                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
       console.log ("ThroughputController");
       var downloadData;
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = false;
-     $scope.resolution = 1;
      $scope.options = {
             chart: {
                 type: 'historicalBarChart',
@@ -108,6 +114,8 @@ app.controller("SpectralController",
             }
         };
 
+        $scope.dt = state.startTime;
+
         $scope.config = {
             refreshDataOnly: false, // default: true
         };
@@ -119,10 +127,10 @@ app.controller("SpectralController",
         
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
             $scope.start = $scope.start || boardData.boardCreated
-            $scope.startTime = $scope.startTime || new Date().getTime()-365*timeUtil.MILLISECONDS_DAY;
+            $scope.startTime = $scope.startTime || state.startTime
             let filter = {
                 "starttime": $scope.startTime,
-                "resolution": $scope.resolution*timeUtil.MILLISECONDS_DAY
+                "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
             var throughputData = boardData.getSpectralAnalysisReport(filter);
             $scope.data = throughput.generateChartData(throughputData);
@@ -138,7 +146,8 @@ app.controller("SpectralController",
         if(!new Date($scope.dt)){
             return;
         }
-        $scope.startTime = new Date($scope.dt).getTime();
+        state.startTime = new Date($scope.dt).getTime();
+        $scope.startTime = state.startTime
         updateReport();
     };
 
@@ -152,9 +161,20 @@ app.controller("SpectralController",
         downloadAsCSV(downloadData, "Throughput_Data");
     };
 
+    $scope.resolutions = [
+        {value:1, label:"1 day"},
+        {value:7, label:"1 week"},
+        {value:14, label:"2 weeks"},
+        {value:21, label:"3 weeks"},
+        {value:30, label:"1 month"}
+    ]
+
+    $scope.resolution =  $scope.resolutions[state.resolution||0];
+    
     $scope.updateResolution = function() {
         if($scope.resolution){
             updateReport();
+            state.resolution =_.indexOf($scope.resolutions,$scope.resolution);
         } 
     };
 
@@ -198,7 +218,7 @@ app.controller("ThroughputController",
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = false;
-     $scope.sprintLength = 1;
+     
      $scope.options = {
             chart: {
                 type: 'historicalBarChart',
@@ -263,7 +283,7 @@ app.controller("ThroughputController",
             $scope.startTime = $scope.startTime || new Date().getTime()-365*timeUtil.MILLISECONDS_DAY;
             
             var filter = {
-                sampleTimes: cfdUtil.generateSampleTimes( $scope.startTime,$scope.sprintLength)//(boardData.boardCreated,1)
+                sampleTimes: cfdUtil.generateSampleTimes( $scope.startTime,$scope.sprintLength.value)//(boardData.boardCreated,1)
             };
             var throughputData = boardData.getThroughputReport(filter);
             $scope.data = throughput.generateChartData(throughputData);
@@ -293,6 +313,15 @@ app.controller("ThroughputController",
         downloadAsCSV(downloadData, "Throughput_Data");
     };
 
+    $scope.sprintLengths = [
+        {"value":1,"label":"1 week"},
+        {"value":2,"label":"2 weeks"},
+        {"value":3,"label":"3 weeks"},
+        {"value":4,"label":"4 weeks"},
+    ]
+
+    $scope.sprintLength = $scope.sprintLengths[0];
+    
     $scope.updateSprintLength = function() {
         if($scope.sprintLength){
             updateReport();

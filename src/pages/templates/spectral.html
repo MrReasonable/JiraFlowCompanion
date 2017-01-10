@@ -34,10 +34,7 @@
 				<div class="col-md-4">
 						<div class="form-group">
       				<label>Resolution:</label>
-      				<select class="form-control" ng-model="resolution" ng-change="updateResolution()" >
-								<option value=1 ng-selected="resolution===1" >1 day</option>
-								<option value=7 ng-selected="resolution===7">1 week</option>
-								<option value=30 ng-selected="resolution===30">1 month</option>
+      				<select class="form-control" ng-model="resolution" ng-change="updateResolution()" ng-options="item.label for item in resolutions" >
 							</select>
 
     		    </div>
