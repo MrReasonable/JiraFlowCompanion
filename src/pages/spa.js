@@ -61,56 +61,42 @@ app.controller("SpectralController",
                 ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory',"sharedState"
                 , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
       console.log ("ThroughputController");
-      var downloadData;
+     var downloadData,sum;
      $scope.data ;
      $scope.today = new Date();
-     $scope.hasData = false;
+     $scope.hasData = true;
      $scope.options = {
+            
             chart: {
-                type: 'historicalBarChart',
-                height: 500,
+                type: 'multiChart',
+                height: 450,
                 margin : {
-                    top: 20,
-                    right: 30,
-                    bottom: 65,
-                    left: 50
+                    top: 30,
+                    right: 60,
+                    bottom: 50,
+                    left: 70
                 },
-                x: function(d){return d[0];},
-                y: function(d){return d[1];},
-                showValues: true,
-                valueFormat: function(d){
-                    return d3.format(',.1f')(d);
-                },
-                duration: 100,
+                color: d3.scale.category10().range(),
+                useInteractiveGuideline: true,
+                duration: 500,
                 xAxis: {
-                    axisLabel: '',
-                    tickFormat: function(d) {
-                        return d3.format(',.0f')(d)
-                    },
-                    rotateLabels: 45,
-                    showMaxMin: false
+                    tickFormat: function(d){
+                        return d3.format(',f')(d);
+                    }
                 },
-                yAxis: {
-                    axisLabel: 'Done items',
-                    axisLabelDistance: -10,
+                yAxis1: {
                     tickFormat: function(d){
                         return d3.format(',.0f')(d);
                     }
                 },
-                tooltip: {
-                    keyFormatter: function(d) {
-                        return d3.format(',.0f')(d);
+                yAxis2: {
+                    tickFormat: function(d){
+                        return d3.format(',.0f')(d/sum*100);
                     }
                 },
-                zoom: {
-                    enabled: true,
-                    scaleExtent: [1, 10],
-                    useFixedDomain: false,
-                    useNiceScale: true,
-                    horizontalOff: true,
-                    verticalOff: true,
-                    unzoomEventType: 'dblclick.zoom'
-                }
+
+                forceX:[0, 900]
+                
             }
         };
 
@@ -133,8 +119,21 @@ app.controller("SpectralController",
                 "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
             var throughputData = boardData.getSpectralAnalysisReport(filter);
-            $scope.data = throughput.generateChartData(throughputData);
-            downloadData = cfdUtil.readableDatesOnCfdData(throughputData)
+            $scope.options.chart.forceX[1] = _.last(throughputData)[0];
+            $scope.data = [];
+            $scope.data.push(throughput.generateDataStream("Done tickets"
+                                                          ,"bar"
+                                                          ,1
+                                                          ,throughputData,throughput.transformToStream));
+            $scope.data.push(throughput.generateDataStream("Percent"
+                                                          ,"line"
+                                                          ,2,throughputData
+                                                          ,[
+                                                             throughput.transformToAccSum
+                                                            ,throughput.transformAccSumToAccPercentage
+                                                          ]));
+            sum = _.last($scope.data[1].values).y;
+            downloadData = throughputData;
             $scope.hasData = true;
             $scope.dt = $scope.startTime;
              
@@ -204,6 +203,49 @@ app.factory("throughputFactory", function () {
             "values" : _.drop(data)
         }];
     };
+
+    factory.generateDataStream = function (key,type,yAxis, data, transform){
+        let result = _.drop(data);
+        if(!_.isArray(transform)){
+            transform = [transform];
+        }
+        
+        transform.forEach( function(trans){
+            result = result.map(trans);
+        });
+
+        return {
+            "key" : key ,
+            "type": type,
+            "yAxis":yAxis,
+            "values" :result
+        };
+    };
+
+    factory.transformToStream = function(pair){
+        return{x:parseInt(pair[0]),y:pair[1]};
+    }
+
+    var sum;
+
+    factory.transformToAccSum = function(pair,index){
+        if(index === 0){
+            sum = 0
+        }
+        sum += pair[1];
+        return{x:parseInt(pair[0]),y:sum};
+    }
+
+    factory.transformAccSumToAccPercentage = function(value,index,arr){
+        if(index === 0){
+            sum = _.last(arr).y;
+        }
+        return{x:value.x,y:Math.floor(value.y/sum*100)};
+    }
+
+
+
+     
     return factory;
 });
 
@@ -211,14 +253,15 @@ app.factory("throughputFactory", function () {
 // ThroughputController ----------------------------------------------------------------------
 
 app.controller("ThroughputController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory'
-                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput) {
+                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState'
+                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
       console.log ("ThroughputController");
       var downloadData;
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = false;
-     
+     $scope.state = state;
+     $scope.dt = $scope.state.startTime;
      $scope.options = {
             chart: {
                 type: 'historicalBarChart',
@@ -279,11 +322,9 @@ app.controller("ThroughputController",
     function updateReport(){
         
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
-            $scope.start = $scope.start || boardData.boardCreated
-            $scope.startTime = $scope.startTime || new Date().getTime()-365*timeUtil.MILLISECONDS_DAY;
-            
+            $scope.start = $scope.start || boardData.boardCreated;
             var filter = {
-                sampleTimes: cfdUtil.generateSampleTimes( $scope.startTime,$scope.sprintLength.value)//(boardData.boardCreated,1)
+                sampleTimes: cfdUtil.generateSampleTimes( $scope.state.startTime,$scope.sprintLength.value)//(boardData.boardCreated,1)
             };
             var throughputData = boardData.getThroughputReport(filter);
             $scope.data = throughput.generateChartData(throughputData);
@@ -299,7 +340,7 @@ app.controller("ThroughputController",
         if(!new Date($scope.dt)){
             return;
         }
-        $scope.startTime = new Date($scope.dt).getTime();
+        $scope.state.startTime = new Date($scope.dt).getTime();
         updateReport();
     };
 
@@ -320,10 +361,12 @@ app.controller("ThroughputController",
         {"value":4,"label":"4 weeks"},
     ]
 
-    $scope.sprintLength = $scope.sprintLengths[0];
+    $scope.state.sprintLength = $scope.state.sprintLength || 0; 
+    $scope.sprintLength = $scope.sprintLengths[$scope.state.sprintLength];
     
     $scope.updateSprintLength = function() {
         if($scope.sprintLength){
+            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,scope.sprintLengths)
             updateReport();
         } 
     };

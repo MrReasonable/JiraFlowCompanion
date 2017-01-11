@@ -334,6 +334,7 @@ function SpectralAnalysisReport(resolution ){
             return a[0]-b[0];
         })
        data.unshift(["Leadtime","item count"]); 
+       console.log(JSON.stringify(data));
        return  data;
     } 
     return self;
