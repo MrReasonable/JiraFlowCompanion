@@ -16,6 +16,7 @@
             "scripts": [
                         "/utils_js/lodash.js",
                         "utils_js/util.js",
+                        "utils_js/jiraUtil.js",
                         "background/background.js"],
             "persistent": false
         },
@@ -30,6 +31,7 @@
                     "utils_js/jquery-2.1.1.min.js",
                     "utils_js/lodash.js",
                     "utils_js/util.js",
+                    "utils_js/jiraUtil.js",
                     "contentScripts/trigger.js"
                   ]
     	}

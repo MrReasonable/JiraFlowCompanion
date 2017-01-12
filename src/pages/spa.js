@@ -366,7 +366,7 @@ app.controller("ThroughputController",
     
     $scope.updateSprintLength = function() {
         if($scope.sprintLength){
-            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,scope.sprintLengths)
+            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,$scope.sprintLengths)
             updateReport();
         } 
     };
