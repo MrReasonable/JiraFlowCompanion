@@ -5,6 +5,31 @@
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
+app.component("quickfilters",{
+      template: `<span><strong>{{$ctrl.boardName}}</strong> Filters: ( </span>
+                 <span ng-repeat="filter in $ctrl.filters"> {{filter}} | </span>)
+                `,
+      bindings:{
+          boardData:'<'
+      },
+      controller: function(boardDataFactory){
+         var self =this;
+         self.filters= [];
+         self.boardName = "(jiraBoard)";
+         this.$onChanges = function (changes) {
+                if (changes.boardData) {
+                    let boardData = changes.boardData.currentValue;
+                    if(boardData){
+                        self.boardData = boardData
+                        self.filters = boardData.getActiveQuickfilters();
+                        self.boardName = self.boardData.boardName;
+                    }
+                    
+                }
+          };  
+      }
+  });
+ 
  app.component("download",{
       template: ' <button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asCSV()">CSV</button><button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asJson()">JSON</button>',
       bindings: { 
@@ -110,6 +135,96 @@ var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
       }]
   });
 
+
+app.component("spectralGraph",{
+      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
+      bindings: {
+          data: '<',
+      },
+      controller: [ 'throughputFactory', function(throughput){
+          var self = this;
+
+          self.chartData;
+          self.sum = 0; 
+          this.$onChanges = function (changes) {
+                if (changes.data) {
+                    self.chartData = transform(changes.data.currentValue);
+                }
+          }; 
+          
+          function transform(data){
+                if(data){
+                    let chartData = [];
+                    let spectralData = throughput.createContinousData(data);
+                    chartData.push(throughput.generateDataStream("Done tickets"
+                                                                ,"bar"
+                                                                ,1
+                                                                ,spectralData
+                                                                ,[
+                                                                        throughput.increaseIndexByOne
+                                                                    ,throughput.transformToStream
+                                                                ]));
+                    chartData.push(throughput.generateDataStream("Percent"
+                                                                ,"line"
+                                                                ,2
+                                                                ,spectralData
+                                                                ,[
+                                                                    throughput.transformToAccSum
+                                                                    ,throughput.transformAccSumToAccPercentage
+                                                                ]));
+                    
+                    self.sum = _.last(chartData[1].values).y;
+                    return chartData;
+                }
+                return ;
+                
+          }
+
+           self.options = {
+            
+            chart: {
+                type: 'multiChart',
+                height: 450,
+                margin : {
+                    top: 30,
+                    right: 60,
+                    bottom: 50,
+                    left: 70
+                },
+                color: d3.scale.category10().range(),
+                useInteractiveGuideline: true,
+                duration: 500,
+                xAxis: {
+                    tickFormat: function(d){
+                        return d3.format(',f')(d);
+                    }
+                },
+                yAxis1: {
+                    tickFormat: function(d){
+                        return d3.format(',.0f')(d);
+                    }
+                },
+                yAxis2: {
+                    tickFormat: function(d){
+                        return d3.format(',.0f')(d/self.sum*100);
+                    }
+                },
+
+                //forceX:[0, 900]
+                
+            }
+        };
+        
+        
+          self.config = {
+              refreshDataOnly: false, // default: true
+          };
+        
+      }]
+  });
+
+
+
 app.factory("cfdFactory", function () {
     var factory = {};
 
@@ -161,32 +276,6 @@ app.factory("cfdFactory", function () {
     return factory;
 });
 
-app.factory("downloadFactory",function(){
-    let self = {}
-    let data;
-    self.setup = function (scope,fileName,formatter){
-        let download = {};
-        download.asJson = function () {
-        downloadAsJson(data, fileName);
-    };
-
-    download.asCSV = function () {
-        downloadAsCSV(data, fileName);
-    };
-
-    download.setData = function(dlData){
-        data = dlData;
-        if(formatter){
-            data = formatter(data);
-        }
-    };
-
-    scope.download = download;
-
-    };
-
-    return self;
-})
 
 app.factory("boardDataFactory", function () {
     var factory = {};
@@ -194,7 +283,7 @@ app.factory("boardDataFactory", function () {
     var cfdUrl;
     var boardConfig; 
 
-    factory.getBoardConfig = function(){
+    factory.fetchApiData = function(){
        let message = {type:"getUrl"}
        
        
@@ -204,11 +293,18 @@ app.factory("boardDataFactory", function () {
                 let eMPromise = sendExtensionMessage(message);
                 eMPromise.then(response => {
                     cfdUrl = new CfdUrl(response);
-                    let boardConfigUrl = cfdUrl.buildBoardConfigUrl();
-                    return sendRestRequest(boardConfigUrl);
+                    
+                    let configPromise =  sendRestRequest(cfdUrl.buildBoardConfigUrl());
+                    let cfdDataPromise = sendRestRequest(cfdUrl.buildUrl());
+                    return Promise.all([configPromise,cfdDataPromise]);
                 }).then( response =>{
-                        boardConfig = response;
-                        resolve(response);
+                        let boardConfig = _.first(response);
+                        let cfdData = _.last(response)
+                        boardData = new BoardData();
+                        boardData.registerCfdApiResponce(cfdData);
+                        boardData.registerBoardConfig(boardConfig);
+                        boardData.registerCfdUrl(cfdUrl);
+                        resolve(boardData);
                     }
                 );
 
@@ -221,9 +317,12 @@ app.factory("boardDataFactory", function () {
              if(data){
                  resolve(data);
              }else{
-                sendRestRequest(url).then(function(response){
-                    data = CfdApiResponceParser().parse(response);
-                    resolve(data);
+                //sendRestRequest(url).then(function(response){
+                //    data = CfdApiResponceParser().parse(response);
+                //    resolve(data);
+                factory.fetchApiData().then(boardData =>  {
+                    data = boardData;
+                    resolve(data)
                 },function(error){
                     reject();
                 });
@@ -249,65 +348,20 @@ app.controller("SpectralController",
                     '$routeParams', 
                     'boardDataFactory', 
                     'throughputFactory',
-                    "sharedState",
-                    "downloadFactory"
-                   , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state,download) {
-      console.log ("ThroughputController");
+                    "sharedState"
+                   , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
+      console.log ("SpectralController");
      let sum;
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = true;
-     $scope.options = {
-            
-            chart: {
-                type: 'multiChart',
-                height: 450,
-                margin : {
-                    top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
-                },
-                color: d3.scale.category10().range(),
-                useInteractiveGuideline: true,
-                duration: 500,
-                xAxis: {
-                    tickFormat: function(d){
-                        return d3.format(',f')(d);
-                    }
-                },
-                yAxis1: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                yAxis2: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d/sum*100);
-                    }
-                },
+     $scope.dt = state.startTime;
 
-                //forceX:[0, 900]
-                
-            }
-        };
-
-        $scope.dt = state.startTime;
-
-        $scope.config = {
-            refreshDataOnly: false, // default: true
-        };
-
-        $scope.board = decodeUrl($routeParams.board);
-
-    
     function updateReport(){
-        boardDataFactory.getBoardConfig().then( function(response){
-            console.log(JSON.stringify(response));
-        });
-
-        boardDataFactory.getBoardData($scope.board).then(function(boardData){
+        
+        boardDataFactory.getBoardData().then(function(boardData){
             let spectralData;
+            $scope.boardData = boardData;
             $scope.start = $scope.start || boardData.boardCreated
             $scope.startTime = $scope.startTime || state.startTime
             let filter = {
@@ -315,25 +369,6 @@ app.controller("SpectralController",
                 "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
-            $scope.data = [];
-            spectralData = throughput.createContinousData($scope.spectralData);
-            $scope.data.push(throughput.generateDataStream("Done tickets"
-                                                          ,"bar"
-                                                          ,1
-                                                          ,spectralData
-                                                          ,[
-                                                                throughput.increaseIndexByOne
-                                                               ,throughput.transformToStream
-                                                           ]));
-            $scope.data.push(throughput.generateDataStream("Percent"
-                                                          ,"line"
-                                                          ,2
-                                                          ,spectralData
-                                                          ,[
-                                                             throughput.transformToAccSum
-                                                            ,throughput.transformAccSumToAccPercentage
-                                                          ]));
-            sum = _.last($scope.data[1].values).y;
             $scope.hasData = true;
             $scope.dt = $scope.startTime;
             $scope.$apply();
@@ -463,8 +498,8 @@ app.factory("throughputFactory", function () {
 // ThroughputController ----------------------------------------------------------------------
 
 app.controller("ThroughputController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState', "downloadFactory"
-                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
+                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState',"cfdFactory"
+                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state,cfd) {
       console.log ("ThroughputController");
      $scope.data ;
      $scope.today = new Date();
@@ -526,20 +561,20 @@ app.controller("ThroughputController",
         };
 
         $scope.board = decodeUrl($routeParams.board);
-
-        download.setup($scope,"ThroughputData",cfdUtil.readableDatesOnCfdData);
+        $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     
     function updateReport(){
         
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
+            $scope.boardData = boardData;
             $scope.start = $scope.start || boardData.boardCreated;
             var filter = {
                 sampleTimes: cfdUtil.generateSampleTimes( $scope.state.startTime,$scope.sprintLength.value)//(boardData.boardCreated,1)
             };
             var throughputData = boardData.getThroughputReport(filter);
             $scope.data = throughput.generateChartData(throughputData);
-            $scope.download.setData(throughputData);
+            $scope.reportData = throughputData;
             $scope.hasData = true;
             $scope.dt = $scope.data[0].values[0][0];
              
@@ -591,7 +626,7 @@ app.controller("ThroughputController",
 
 
 
-app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState','downloadFactory', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state,download) {
+app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state) {
 
     $scope.cfdData = [{"key" : "No data" , "values" : [ [ 0 , 0]]}];
     $scope.dt = 0;
@@ -678,14 +713,14 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
 app.controller("TabController", [
         '$scope',
         '$location',
-        function ($scope, $location) {
+        '$routeParams',
+        function ($scope, $location,$routeParams) {
             $scope.tabs = [];
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
             $scope.tabs.push({"caption": "Throughput", "active": false, "route": "/throughput/"});
             $scope.tabs.push({"caption": "Spectral", "active": false, "route": "/spectral/"});
 
-            $scope.boardUrl = _.last($location.url().split("/"));
-
+            
             $scope.setActiveTab = function (url) {
                 _.forEach($scope.tabs, function (tab) {
                     if (url.indexOf(tab.route) > -1) {
@@ -697,7 +732,7 @@ app.controller("TabController", [
             };
 
             $scope.goTo = function (route) {
-                $location.url(route + $scope.boardUrl);
+                $location.url(route + $routeParams.board + "/" + $routeParams.id);
                 $scope.setActiveTab($location.url())
                 $scope.boardUrl = _.last($location.url().split("/"));
             };
@@ -712,13 +747,13 @@ app.controller("TabController", [
 app.config(['$routeProvider',
     function ($routeProvider) {
         $routeProvider.
-            when('/cfd/:board', {
+            when('/cfd/:board/:id', {
                templateUrl: 'templates/cumulative-flow-diagram.html',
                controller: 'CfdController'
-            }).when('/throughput/:board', {
+            }).when('/throughput/:board/:id', {
                 templateUrl: 'templates/throughput.html',
                 controller: 'ThroughputController'
-            }).when('/spectral/:board', {
+            }).when('/spectral/:board/:id', {
                 templateUrl: 'templates/spectral.html',
                 controller: 'SpectralController'
             })/*.when('/flowreport/:board', {
@@ -728,7 +763,7 @@ app.config(['$routeProvider',
                 templateUrl: 'templates/cycletime.html',
                 controller: 'CycletimeController'
             })*/.otherwise({
-                redirectTo: '/cfd/:board'
+                redirectTo: '/cfd/:board/:id'
             });
     }
 ]);

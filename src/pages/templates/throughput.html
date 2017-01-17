@@ -3,7 +3,7 @@
 		<div class="col-sm-12">
 			<div class="well">
         <h4>Througput! (BETA)</h4>
-        
+       <quickfilters board-data="boardData"></quickfilters>
       </div>
       
       
@@ -12,7 +12,7 @@
 
 	<div class="row">
 		<div class="col-lg-12">
-			<nvd3 options="options" data="data" config="config" ng-show="hasData"></nvd3>
+			<cfd-graph data="cfdDataTable" zero="zeroDone" ></cfd-graph>
 		</div>
 	</div>
   <div class="row">
@@ -42,13 +42,7 @@
     </div>
 		<div class="row">
 			<div class="col-md-8">
-          <form class="form-inline">  
-						<div class="form-group">
-      					<label class="">Export Data as:</label>
-      					<button type="button" class="btn btn-default navbar-btn form-control" ng-click="download.asCSV()">CSV</button>
-								<button type="button" class="btn btn-default navbar-btn form-control" ng-click="download.asJson()">JSON</button >
-  					</div>
-          </form>
+         <download filename="ThroughputData" format="dlFormat", data="reportData" ></download>
         </div>
 		</div>
     <div class="row">

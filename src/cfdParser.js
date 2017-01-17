@@ -43,6 +43,29 @@ function BoardData(){
 
     self.tickets = {}
 
+    self.registerCfdApiResponce = function (apiResponse){
+        var changeTime;
+        var columnChange;
+        self.registerColumns(apiResponse.columns);
+        self.registerColumnChanges(apiResponse.columnChanges);
+    }
+
+    self.registerColumnChanges = function(columnChanges){
+       for(let changeTime in columnChanges){  
+         _.forEach(columnChanges[changeTime], function(item){
+                columnChange = {};
+                columnChange.id = item.key;
+                columnChange.enter = changeTime ;
+                columnChange.column = boardData.columns[item.columnTo];
+                self.registerColumnChange(columnChange);
+            });
+       }
+    }
+
+    self.registerColumns = function(jiraColumns){
+        self.columns = jiraColumns.map((col,index)=>({"index":index,"name":col.name}));
+    };
+        
     self.registerColumnChange = function (columnChange){
         var ticket;
         if( ! self.boardCreated ){
@@ -60,12 +83,20 @@ function BoardData(){
         ticket.registerColumnChange(columnChange);
     };
 
+    self.registerBoardConfig = function(apiResponse){
+        self.registerBoardId( apiResponse.id);
+        self.registerBoardName( apiResponse.name);
+        self.registerMappedColumns(apiResponse.rapidListConfig.mappedColumns);
+        self.registerSwimlanesConfig(apiResponse.swimlanesConfig);
+        self.registerQuickFilterConfig(apiResponse.quickFilterConfig);
+    }
+    
     self.registerBoardId = function(id){
         self.id = id;
     }
 
     self.registerBoardName = function(name){
-        self.BoardName = name;
+        self.boardName = name;
     }
 
     self.registerMappedColumns = function (cols){
@@ -76,8 +107,25 @@ function BoardData(){
         self.swimlanes = swimlanesConfig.swimlanes.map(item => ({"id":item.id, "name":item.name}));
     }
 
-    self.quickFilterConfig = function(quickFilterConfig){
-        self.quickFilters = quickFilterConfig.quickfilters.map(item => ({"id":item.id, "name":item.name}));
+    self.registerQuickFilterConfig = function(quickFilterConfig){
+        self.quickFilters = quickFilterConfig.quickFilters.map(item => ({"id":item.id, "name":item.name}));
+    }
+
+    self.registerCfdUrl = function(cfdUrl){
+        self.cfdUrl = cfdUrl;
+    }
+
+    self.getActiveQuickfilters = function(){
+        let filters = self.cfdUrl.query.quickFilter;
+        let filterNames = [];
+        
+        filters.forEach(filter=>{
+            let qf = self.quickFilters.find(quickFilter=>{
+                return quickFilter.id === parseInt(filter); 
+            })
+            filterNames.push(qf.name)
+        })
+        return filterNames;
     }
 
 
@@ -145,7 +193,7 @@ function BoardData(){
         var index = 1;
         console.log("getCfdColumnIndexes");
         _.forEachRight(self.columns ,function(column){
-            indexes[column] = index;
+            indexes[column.name] = index;
             index ++;
         })
 
@@ -153,7 +201,7 @@ function BoardData(){
     }
 
     var getCfdGrid = function(filter){
-        var laneHeaders = _.reverse(_.clone(self.columns));
+        var laneHeaders = _.reverse(_.clone(self.columns).map(col => col.name));
         var grid;
         var row ;
         grid = gridOf(0,filter.sampleTimes.length+1,laneHeaders.length+1);
@@ -225,8 +273,9 @@ function Ticket(id){
     self.wasInColumn = function(timestamp){
         var column = "";
         _.forEach(self.columnChanges,function(columnChange){
-            if(columnChange.enter <= timestamp){
-                column = columnChange.column;
+            if(columnChange.enter <= timestamp && columnChange.column){
+                
+                column = columnChange.column.name;
             }else{
                 return false;
             }

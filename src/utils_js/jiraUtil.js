@@ -62,6 +62,14 @@ function CfdUrl(location){
         return result;
     }
 
+    url.getBoardId = function(){
+        return url.query.rapidView
+    }
+
+    url.getHostWithProtocol = function(){
+        return  url.protocol +"//"+ url.host
+    }
+
     return url;
 
 }
