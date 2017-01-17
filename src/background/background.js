@@ -1,8 +1,9 @@
+let cfdUrl;
 function messageHandler (request, sender, sendResponse) {
     "use strict";
     var data,settings,key;
     console.log ("Incoming request = " + jsonEncode(request));
-    let cfdUrl;
+    
     switch(request.type) {
         case "open-data-page"://board triggering spa page opening
            
@@ -18,6 +19,9 @@ function messageHandler (request, sender, sendResponse) {
                 console.log("open-data-page handled spa.html#/cfd/"+ request.page +" opened");
            
 
+            break;
+        case "getUrl":
+            sendResponse(cfdUrl);
             break;
     }
     return true;

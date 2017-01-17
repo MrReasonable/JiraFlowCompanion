@@ -12,7 +12,7 @@
 
 	<div class="row">
 		<div class="col-lg-12">
-			<nvd3 options="options" data="cfdData" config="config" ng-show="hasData"></nvd3>
+			<cfd-graph data="cfdDataTable" zero="zeroDone" ng-show="hasData"></cfd-graph>
 		</div>
 	</div>
   <div class="row">
@@ -42,14 +42,8 @@
               </span>
             </p>
         </div>
-        <!--div class="col-md-4">
-            <div class="text-input">
-                <input type="text" class="form-control" placeholder="filter" ng-model="filter" ng-enter="filterChanged()" >
-            </div>
-        </div-->
         <div class="col-md-2">
-                <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsCSV()">CSV</button>
-                <button type="button" class="btn btn-default navbar-btn" ng-click="downloadAsJson()">JSON</button>
+                <download filename="CumulativeFlowData" format="dlFormat", data="cfdDataTable" ></download>
         </div>
     </div>
     <div class="row">

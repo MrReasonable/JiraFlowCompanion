@@ -28,16 +28,27 @@ function CfdUrl(location){
     let url  = new Url(location);   
 
     url.buildUrl = function(){
+       return urlBuilder("rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json", buildCfdQueryString);
+    }
+
+    url.buildBoardConfigUrl = function(){
+        return urlBuilder("/rest/greenhopper/1.0/rapidviewconfig/editmodel.json",
+                          function(query){
+                              return "?rapidViewId="+query.rapidView[0];
+                          });
+    }
+
+    function urlBuilder(path,queryBuilder){
         var result = url.protocol +"//"
                     + url.host 
                     + url.path.replace(
                         "secure/RapidBoard.jspa"
-                        ,"rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json"
+                        ,path
                     ) 
-                    + buildCfdQueryString(url.query);
+                    + queryBuilder(url.query);
         return result;
     }
-
+    
     function buildCfdQueryString(query){
         var result = "";
         _.forEach(query, function(values,key){

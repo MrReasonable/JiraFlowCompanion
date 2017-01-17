@@ -1,25 +1,3 @@
-/*
-cfdData ={
-
-        columns:["column1","column2","column3"]
-        tickets: [
-            {
-                id:"ABC-01",
-                columnChanges:{
-                    "1234567892":{
-                        toColumn : "column1"
-                        timestamp:"1234567892"
-                    },
-                    "1324567892":{
-                        column : "column2"
-                        timestamp:"1234567892"
-                    }
-                }
-
-            }
-        ]
-}*/
-
 
 function CfdApiResponceParser(){
     var self = {};
@@ -81,6 +59,26 @@ function BoardData(){
 
         ticket.registerColumnChange(columnChange);
     };
+
+    self.registerBoardId = function(id){
+        self.id = id;
+    }
+
+    self.registerBoardName = function(name){
+        self.BoardName = name;
+    }
+
+    self.registerMappedColumns = function (cols){
+        self.mappedColumns = cols.map(item => ({"id":item.id, "name":item.name}));
+    }
+
+    self.registerSwimlanesConfig = function (swimlanesConfig){
+        self.swimlanes = swimlanesConfig.swimlanes.map(item => ({"id":item.id, "name":item.name}));
+    }
+
+    self.quickFilterConfig = function(quickFilterConfig){
+        self.quickFilters = quickFilterConfig.quickfilters.map(item => ({"id":item.id, "name":item.name}));
+    }
 
 
 
@@ -328,7 +326,7 @@ function SpectralAnalysisReport(resolution ){
     self.getData = function(){
         let data = [];
         _.forEach(spectralAnalysisData,function(item,index){
-            data.push([index,item]);
+            data.push([parseInt(index),item]);
         })
         data.sort(function(a,b){
             return a[0]-b[0];

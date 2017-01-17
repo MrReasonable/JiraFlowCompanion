@@ -1,37 +1,221 @@
 //spa.js
 
 
+
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
+ app.component("download",{
+      template: ' <button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asCSV()">CSV</button><button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asJson()">JSON</button>',
+      bindings: { 
+          format: '&',
+          filename: '@',
+          data: '<'
+      },
+      controller: function(){
+        var self =this;
 
-app.filter("days", function () {
-    return function (input) {
-        return Math.round(input / timeUtil.MILLISECONDS_DAY);
-    };
-});
+        self.asCSV = function () {
+          downloadAsCSV(format(self.data), self.filename);
+        };
 
+        self.asJson = function () {
+            downloadAsJson(format(self.data), self.filename);
+        };
 
-app.directive('ngEnter', function () {
-    return function (scope, element, attrs) {
-        element.bind("keydown keypress", function (event) {
-            if (event.which === 13) {
-                scope.$apply(function () {
-                    scope.$eval(attrs.ngEnter);
-                });
-
-                event.preventDefault();
+        function format (){
+            var data = self.data;
+            if(self.format){
+                data = self.format()(data);
             }
+            return data;
+        };
+
+      }
+  });
+
+  app.component("cfdGraph",{
+      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
+      bindings: {
+          data: '<',
+          zero: '<'
+      },
+      controller: [ 'cfdFactory', function(cfd){
+          var self = this;
+
+          self.chartData; 
+          this.$onChanges = function (changes) {
+                if (changes.data) {
+                    self.chartData = transform(changes.data.currentValue);
+                }
+          }; 
+          
+          function transform(data){
+                if(data){
+                    let cfdChartData = cfd.buildCfdChartData(data);
+                    if (self.zero) {
+                        cfdChartData = cfd.doneStartsFrom0(cfdChartData);
+                    }
+                    return cfdChartData;
+                }
+                return ;
+                
+          }
+
+          self.options = {
+                chart: {
+                    type: 'stackedAreaChart',
+                    height: 450,
+                    margin : {
+                        top: 20,
+                        right: 20,
+                        bottom: 30,
+                        left: 40
+                    },
+                    x: function(d){return d[0];},
+                    y: function(d){return d[1];},
+                    useVoronoi: false,
+                    clipEdge: true,
+                    duration: 100,
+                    useInteractiveGuideline: true,
+                    xAxis: {
+                        showMaxMin: false,
+                        tickFormat: function(d) {
+                            return d3.time.format('%Y-%m-%d')(new Date(d))
+                        }
+                    },
+                    yAxis: {
+                        rotateLabels: 45,
+                        tickFormat: function(d){
+                            return d3.format(',.0f')(d);
+                        }
+                    },
+                    zoom: {
+                        enabled: true,
+                        scaleExtent: [1, 10],
+                        useFixedDomain: false,
+                        useNiceScale: false,
+                        horizontalOff: false,
+                        verticalOff: true,
+                        unzoomEventType: 'dblclick.zoom'
+                    }
+                }
+            };
+        
+        
+          self.config = {
+              refreshDataOnly: false, // default: true
+          };
+        
+      }]
+  });
+
+app.factory("cfdFactory", function () {
+    var factory = {};
+
+
+    factory.filterCfdChartData = function (cfdRawChartData, start) {
+        var filteredCfdData = [];
+        _.forEach(cfdRawChartData, function (laneData) {
+            var filteredLane = {};
+            filteredLane.key = laneData.key;
+            filteredLane.values = filterArray(laneData.values, function (value) {
+                return value[0] >= start;
+            });
+            filteredCfdData.push(filteredLane);
         });
+        return filteredCfdData;
     };
+
+    factory.buildCfdChartData = function (cfdData) {
+        var chartData = [];
+        var lane, day;
+        var laneData;
+        console.log("buildCfdChartData");
+        if (cfdData.length === 0) {
+            return cfdData;
+        }
+        for (lane = 1; lane < cfdData[0].length; lane++) {
+            laneData = {};
+            laneData.key = cfdData[0][lane];
+            laneData.values = [];
+            for (day = 1; day < cfdData.length; day++) {
+                laneData.values.push([cfdData[day][0], cfdData[day][lane]]);
+            }
+            chartData.push(laneData);
+        }
+        return chartData;
+    };
+
+    factory.readableDatesOnCfdData = cfdUtil.readableDatesOnCfdData;
+
+    factory.doneStartsFrom0 = function (cfdChartData) {
+        cfdChartData = _.cloneDeep(cfdChartData);
+        var doneAccumulated = cfdChartData[0].values[0][1];
+        _.forEach(cfdChartData[0].values, function (value) {
+            value[1] = value[1] - doneAccumulated;
+        });
+        return cfdChartData;
+    };
+
+    return factory;
 });
 
+app.factory("downloadFactory",function(){
+    let self = {}
+    let data;
+    self.setup = function (scope,fileName,formatter){
+        let download = {};
+        download.asJson = function () {
+        downloadAsJson(data, fileName);
+    };
 
+    download.asCSV = function () {
+        downloadAsCSV(data, fileName);
+    };
+
+    download.setData = function(dlData){
+        data = dlData;
+        if(formatter){
+            data = formatter(data);
+        }
+    };
+
+    scope.download = download;
+
+    };
+
+    return self;
+})
 
 app.factory("boardDataFactory", function () {
     var factory = {};
     var data;
+    var cfdUrl;
+    var boardConfig; 
 
+    factory.getBoardConfig = function(){
+       let message = {type:"getUrl"}
+       
+       
+       return new Promise( 
+           (resolve, reject) => {
+                
+                let eMPromise = sendExtensionMessage(message);
+                eMPromise.then(response => {
+                    cfdUrl = new CfdUrl(response);
+                    let boardConfigUrl = cfdUrl.buildBoardConfigUrl();
+                    return sendRestRequest(boardConfigUrl);
+                }).then( response =>{
+                        boardConfig = response;
+                        resolve(response);
+                    }
+                );
+
+                          
+            });
+    };
+    
     factory.getBoardData = function (url) {
          return new Promise(function (resolve, reject) {
              if(data){
@@ -58,10 +242,18 @@ app.factory("sharedState",function(){
 });
 
 app.controller("SpectralController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory',"sharedState"
-                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
+                [
+                    '$scope', 
+                    '$route', 
+                    '$window', 
+                    '$routeParams', 
+                    'boardDataFactory', 
+                    'throughputFactory',
+                    "sharedState",
+                    "downloadFactory"
+                   , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state,download) {
       console.log ("ThroughputController");
-     var downloadData,sum;
+     let sum;
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = true;
@@ -95,7 +287,7 @@ app.controller("SpectralController",
                     }
                 },
 
-                forceX:[0, 900]
+                //forceX:[0, 900]
                 
             }
         };
@@ -110,33 +302,40 @@ app.controller("SpectralController",
 
     
     function updateReport(){
-        
+        boardDataFactory.getBoardConfig().then( function(response){
+            console.log(JSON.stringify(response));
+        });
+
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
+            let spectralData;
             $scope.start = $scope.start || boardData.boardCreated
             $scope.startTime = $scope.startTime || state.startTime
             let filter = {
                 "starttime": $scope.startTime,
                 "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
-            var throughputData = boardData.getSpectralAnalysisReport(filter);
-            $scope.options.chart.forceX[1] = _.last(throughputData)[0];
+            $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
             $scope.data = [];
+            spectralData = throughput.createContinousData($scope.spectralData);
             $scope.data.push(throughput.generateDataStream("Done tickets"
                                                           ,"bar"
                                                           ,1
-                                                          ,throughputData,throughput.transformToStream));
+                                                          ,spectralData
+                                                          ,[
+                                                                throughput.increaseIndexByOne
+                                                               ,throughput.transformToStream
+                                                           ]));
             $scope.data.push(throughput.generateDataStream("Percent"
                                                           ,"line"
-                                                          ,2,throughputData
+                                                          ,2
+                                                          ,spectralData
                                                           ,[
                                                              throughput.transformToAccSum
                                                             ,throughput.transformAccSumToAccPercentage
                                                           ]));
             sum = _.last($scope.data[1].values).y;
-            downloadData = throughputData;
             $scope.hasData = true;
             $scope.dt = $scope.startTime;
-             
             $scope.$apply();
         },function(reject){});
     }
@@ -150,15 +349,6 @@ app.controller("SpectralController",
         updateReport();
     };
 
-
-
-    $scope.downloadAsJson = function () {
-        downloadAsJson(downloadData, "Throughput_Data");
-    };
-
-    $scope.downloadAsCSV = function () {
-        downloadAsCSV(downloadData, "Throughput_Data");
-    };
 
     $scope.resolutions = [
         {value:1, label:"1 day"},
@@ -222,8 +412,28 @@ app.factory("throughputFactory", function () {
         };
     };
 
+    factory.createContinousData = function(data){
+        let header = data.shift();
+        let max = _.last(data)[0];
+        let grid = gridOf(0,max,2);
+
+        grid = grid.map(function(item,index){
+            return [index,0];
+        });
+
+        data.forEach(function(item){
+            grid[item[0]]=item;
+        });
+        grid.unshift(header);
+        return grid;
+    }
+
     factory.transformToStream = function(pair){
         return{x:parseInt(pair[0]),y:pair[1]};
+    }
+
+    factory.increaseIndexByOne = function(pair){
+        return [pair[0]+1,pair[1]];
     }
 
     var sum;
@@ -253,10 +463,9 @@ app.factory("throughputFactory", function () {
 // ThroughputController ----------------------------------------------------------------------
 
 app.controller("ThroughputController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState'
+                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState', "downloadFactory"
                 , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
       console.log ("ThroughputController");
-      var downloadData;
      $scope.data ;
      $scope.today = new Date();
      $scope.hasData = false;
@@ -318,6 +527,8 @@ app.controller("ThroughputController",
 
         $scope.board = decodeUrl($routeParams.board);
 
+        download.setup($scope,"ThroughputData",cfdUtil.readableDatesOnCfdData);
+
     
     function updateReport(){
         
@@ -328,7 +539,7 @@ app.controller("ThroughputController",
             };
             var throughputData = boardData.getThroughputReport(filter);
             $scope.data = throughput.generateChartData(throughputData);
-            downloadData = cfdUtil.readableDatesOnCfdData(throughputData)
+            $scope.download.setData(throughputData);
             $scope.hasData = true;
             $scope.dt = $scope.data[0].values[0][0];
              
@@ -344,15 +555,6 @@ app.controller("ThroughputController",
         updateReport();
     };
 
-
-
-    $scope.downloadAsJson = function () {
-        downloadAsJson(downloadData, "Throughput_Data");
-    };
-
-    $scope.downloadAsCSV = function () {
-        downloadAsCSV(downloadData, "Throughput_Data");
-    };
 
     $scope.sprintLengths = [
         {"value":1,"label":"1 week"},
@@ -386,59 +588,10 @@ app.controller("ThroughputController",
 // CFD
 //******************************************************************************************
 
-app.factory("cfdFactory", function () {
-    var factory = {};
 
 
-    factory.filterCfdChartData = function (cfdRawChartData, start) {
-        var filteredCfdData = [];
-        _.forEach(cfdRawChartData, function (laneData) {
-            var filteredLane = {};
-            filteredLane.key = laneData.key;
-            filteredLane.values = filterArray(laneData.values, function (value) {
-                return value[0] >= start;
-            });
-            filteredCfdData.push(filteredLane);
-        });
-        return filteredCfdData;
-    };
 
-    factory.buildCfdChartData = function (cfdData) {
-        var chartData = [];
-        var lane, day;
-        var laneData;
-        console.log("buildCfdChartData");
-        if (cfdData.length === 0) {
-            return cfdData;
-        }
-        for (lane = 1; lane < cfdData[0].length; lane++) {
-            laneData = {};
-            laneData.key = cfdData[0][lane];
-            laneData.values = [];
-            for (day = 1; day < cfdData.length; day++) {
-                laneData.values.push([cfdData[day][0], cfdData[day][lane]]);
-            }
-            chartData.push(laneData);
-        }
-        return chartData;
-    };
-
-    factory.readableDatesOnCfdData = cfdUtil.readableDatesOnCfdData;
-
-    factory.doneStartsFrom0 = function (cfdChartData) {
-        cfdChartData = _.cloneDeep(cfdChartData);
-        var doneAccumulated = cfdChartData[0].values[0][1];
-        _.forEach(cfdChartData[0].values, function (value) {
-            value[1] = value[1] - doneAccumulated;
-        });
-        return cfdChartData;
-    };
-
-    return factory;
-});
-
-
-app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd) {
+app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState','downloadFactory', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state,download) {
 
     $scope.cfdData = [{"key" : "No data" , "values" : [ [ 0 , 0]]}];
     $scope.dt = 0;
@@ -446,69 +599,22 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     $scope.startTime = 0;
     $scope.zeroDone = false;
     $scope.filter = "";
-    var cfdDownloadData = [];
     var cfdRawChartData = [];
     
-    $scope.options = {
-            chart: {
-                type: 'stackedAreaChart',
-                height: 450,
-                margin : {
-                    top: 20,
-                    right: 20,
-                    bottom: 30,
-                    left: 40
-                },
-                x: function(d){return d[0];},
-                y: function(d){return d[1];},
-                useVoronoi: false,
-                clipEdge: true,
-                duration: 100,
-                useInteractiveGuideline: true,
-                xAxis: {
-                    showMaxMin: false,
-                    tickFormat: function(d) {
-                        return d3.time.format('%Y-%m-%d')(new Date(d))
-                    }
-                },
-                yAxis: {
-                    rotateLabels: 45,
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                zoom: {
-                    enabled: true,
-                    scaleExtent: [1, 10],
-                    useFixedDomain: false,
-                    useNiceScale: false,
-                    horizontalOff: false,
-                    verticalOff: true,
-                    unzoomEventType: 'dblclick.zoom'
-                }
-            }
-        };
-    
-    $scope.config = {
-        refreshDataOnly: false, // default: true
-    };
     
     console.log("cfdController");
+
+    //download.setup($scope,"cfdData",cfd.readableDatesOnCfdData);
+    $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     function updateCfd(cfdTableData) {
         var cfdChartData;
         if (cfdTableData.length === 0) {
             return;
         }
-        cfdDownloadData = cfdTableData;
-        cfdRawChartData = cfd.buildCfdChartData(cfdDownloadData);
-        cfdChartData = cfd.filterCfdChartData(cfdRawChartData, $scope.startTime);
-        if ($scope.zeroDone) {
-            cfdChartData = cfd.doneStartsFrom0(cfdChartData);
-        }
-        $scope.cfdData = cfdChartData;
+        $scope.cfdDataTable = cfdTableData;
         $scope.hasData = true;
-        $scope.dt = $scope.cfdData[0].values[0][0];
+        $scope.dt = $scope.cfdDataTable[1][0];
     }
 
     $scope.toggleMin = function () {
@@ -561,15 +667,6 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
         updateCfd(cfdDownloadData);
     };
 
-    $scope.downloadAsJson = function () {
-        var download = cfd.readableDatesOnCfdData(cfdDownloadData);
-        downloadAsJson(download, "CFD_Data");
-    };
-
-    $scope.downloadAsCSV = function () {
-        var download = cfd.readableDatesOnCfdData(cfdDownloadData);
-        downloadAsCSV(download, "CFD_Data");
-    };
 
     $scope.$on('$viewContentLoaded', function (event) {
         $window._gaq.push(['_trackPageview', "CFD"]);
