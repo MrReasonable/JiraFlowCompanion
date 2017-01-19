@@ -5,18 +5,51 @@
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
+
+app.component ("datePicker",{
+    template: ` <p class="input-group">
+                    <input type="text" class="form-control" datepicker-popup="yyyy-MM-dd" ng-model="$ctrl.dt"  
+                    ng-change="$ctrl.dateChanged()" is-open="$ctrl.opened" min-date="$ctrl.start" 
+                    max-date="$ctrl.today" ng-required="true" close-text="Close" />
+                    <span class="input-group-btn">
+                        <button type="button" class="btn btn-default" ng-click="$ctrl.open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
+                    </span>
+                 </p>`,
+    bindings:{
+        dt: '=',
+        dateChanged:'&',
+        minDate: '<'
+    },
+
+    controller: function(){
+        self = this
+        self.today = new Date();
+        
+        
+        
+        self.open = function ($event) {
+            $event.preventDefault();
+            $event.stopPropagation();
+            self.opened = true;
+        };
+
+        
+ 
+    }
+});
+
 app.component("quickfilters",{
-      template: `<span><strong>{{$ctrl.boardName}}</strong> Filters: ( </span>
-                 <span ng-repeat="filter in $ctrl.filters"> {{filter}} | </span>)
+      template: `<span><strong>{{$ctrl.boardName}}</strong> Filters: | </span>
+                 <span ng-repeat="filter in $ctrl.filters"> {{filter}} | </span>
                 `,
       bindings:{
           boardData:'<'
       },
-      controller: function(boardDataFactory){
+      controller: function(){
          var self =this;
          self.filters= [];
          self.boardName = "(jiraBoard)";
-         this.$onChanges = function (changes) {
+         self.$onChanges = function (changes) {
                 if (changes.boardData) {
                     let boardData = changes.boardData.currentValue;
                     if(boardData){
@@ -224,6 +257,87 @@ app.component("spectralGraph",{
   });
 
 
+app.component("throughputGraph",{
+      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
+      bindings: {
+          data: '<',
+          rollingAverage: '<'
+      },
+      controller: [ 'throughputFactory', function(throughput){
+          var self = this;
+
+          self.chartData;
+          //self.sum = 0; 
+          this.$onChanges = function (changes) {
+                if (changes.data) {
+                    self.chartData = transform(changes.data.currentValue);
+                }
+          }; 
+          
+          function transform(data){
+                if(data){
+                    let chartData = [];
+                    let throughputData = data;
+                    chartData.push(throughput.generateDataStream("Done tickets"
+                                                                ,"bar"
+                                                                ,1
+                                                                ,throughputData
+                                                                ,[
+                                                                        throughput.increaseIndexByOne
+                                                                    ,throughput.transformToStream
+                                                                ]));
+                    chartData.push(throughput.generateDataStream("rolling Avg"
+                                                                ,"line"
+                                                                ,1
+                                                                ,throughputData
+                                                                ,[
+                                                                    throughput.rollingAverageTransformer( self.rollingAverage)
+                                                                   ,throughput.transformToStream
+                                                                ]));
+                    
+                    //self.sum = _.last(chartData[1].values).y;
+                    return chartData;
+                }
+                return ;
+                
+          }
+
+           self.options = {
+            
+            chart: {
+                type: 'multiChart',
+                height: 450,
+                margin : {
+                    top: 30,
+                    right: 60,
+                    bottom: 50,
+                    left: 70
+                },
+                color: d3.scale.category10().range(),
+                useInteractiveGuideline: true,
+                duration: 500,
+                xAxis: {
+                    tickFormat: function(d) {
+                        return d3.time.format('%Y-%m-%d')(new Date(d));
+                    }
+                },
+                yAxis1: {
+                    tickFormat: function(d){
+                        return d3.format(',.0f')(d);
+                    }
+                }
+            }
+        };
+        
+        
+          self.config = {
+              refreshDataOnly: false, // default: true
+          };
+        
+      }]
+  });
+
+
 
 app.factory("cfdFactory", function () {
     var factory = {};
@@ -353,34 +467,32 @@ app.controller("SpectralController",
       console.log ("SpectralController");
      let sum;
      $scope.data ;
-     $scope.today = new Date();
      $scope.hasData = true;
-     $scope.dt = state.startTime;
+     $scope.dt = new Date(state.startTime)||new Date();
 
     function updateReport(){
         
         boardDataFactory.getBoardData().then(function(boardData){
             let spectralData;
             $scope.boardData = boardData;
-            $scope.start = $scope.start || boardData.boardCreated
-            $scope.startTime = $scope.startTime || state.startTime
             let filter = {
-                "starttime": $scope.startTime,
+                "starttime": state.startTime,
                 "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
             $scope.hasData = true;
-            $scope.dt = $scope.startTime;
             $scope.$apply();
         },function(reject){});
     }
 
+    
     $scope.startDateChanged = function () {
+
+        console.log("In:" + $scope.dt);
         if(!new Date($scope.dt)){
             return;
         }
         state.startTime = new Date($scope.dt).getTime();
-        $scope.startTime = state.startTime
         updateReport();
     };
 
@@ -400,12 +512,6 @@ app.controller("SpectralController",
             updateReport();
             state.resolution =_.indexOf($scope.resolutions,$scope.resolution);
         } 
-    };
-
-    $scope.open = function ($event) {
-        $event.preventDefault();
-        $event.stopPropagation();
-        $scope.opened = true;
     };
 
     updateReport();
@@ -430,14 +536,18 @@ app.factory("throughputFactory", function () {
     };
 
     factory.generateDataStream = function (key,type,yAxis, data, transform){
-        let result = _.drop(data);
+        let result = _.drop(_.clone(data));
         if(!_.isArray(transform)){
             transform = [transform];
         }
+
+        //console.log("original data =" + JSON.stringify(result));
         
         transform.forEach( function(trans){
             result = result.map(trans);
         });
+
+        //console.log("transformed data =" + JSON.stringify(result));
 
         return {
             "key" : key ,
@@ -481,6 +591,28 @@ app.factory("throughputFactory", function () {
         return{x:parseInt(pair[0]),y:sum};
     }
 
+    factory.rollingAverageTransformer = function(over){
+        
+        return function(value,index,arr){
+            let sum = 0;
+            let samples = 0;
+            let avg; 
+            for(let i=index-(over-1);i<=index;i++){
+                if(i>=0){
+                    sum += _.last(arr[i]);
+                    samples++;
+                }
+            }
+            avg = Math.floor(100*sum/samples)/100;
+            console.log("sum/samples=avg =" + sum +"/"+ samples +"=" + avg);
+            return [_.first(value),avg];
+        }
+    }
+
+    
+
+    
+
     factory.transformAccSumToAccPercentage = function(value,index,arr){
         if(index === 0){
             sum = _.last(arr).y;
@@ -502,91 +634,34 @@ app.controller("ThroughputController",
                 , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state,cfd) {
       console.log ("ThroughputController");
      $scope.data ;
+     $scope.rollingAverage = 3;
      $scope.today = new Date();
      $scope.hasData = false;
      $scope.state = state;
-     $scope.dt = $scope.state.startTime;
-     $scope.options = {
-            chart: {
-                type: 'historicalBarChart',
-                height: 500,
-                margin : {
-                    top: 20,
-                    right: 30,
-                    bottom: 65,
-                    left: 50
-                },
-                x: function(d){return d[0];},
-                y: function(d){return d[1];},
-                showValues: true,
-                valueFormat: function(d){
-                    return d3.format(',.1f')(d);
-                },
-                duration: 100,
-                xAxis: {
-                    axisLabel: '',
-                    tickFormat: function(d) {
-                        return d3.time.format('%Y-%m-%d')(new Date(d))
-                    },
-                    rotateLabels: 45,
-                    showMaxMin: false
-                },
-                yAxis: {
-                    axisLabel: 'Done items',
-                    axisLabelDistance: -10,
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                tooltip: {
-                    keyFormatter: function(d) {
-                        return d3.time.format('%Y-%m-%d')(new Date(d)) +" - "+
-                               d3.time.format('%Y-%m-%d')(new Date(d+($scope.sprintLength*7-1)*timeUtil.MILLISECONDS_DAY));
-                    }
-                },
-                zoom: {
-                    enabled: true,
-                    scaleExtent: [1, 10],
-                    useFixedDomain: false,
-                    useNiceScale: true,
-                    horizontalOff: true,
-                    verticalOff: true,
-                    unzoomEventType: 'dblclick.zoom'
-                }
-            }
-        };
-
-        $scope.config = {
-            refreshDataOnly: false, // default: true
-        };
-
-        $scope.board = decodeUrl($routeParams.board);
-        $scope.dlFormat = cfd.readableDatesOnCfdData;
+     $scope.dt = new Date(state.startTime)||new Date();
+     $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     
     function updateReport(){
         
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
+            $scope.state.startTime = new Date($scope.dt).getTime();
+            console.log($scope.dt)
             $scope.boardData = boardData;
-            $scope.start = $scope.start || boardData.boardCreated;
             var filter = {
-                sampleTimes: cfdUtil.generateSampleTimes( $scope.state.startTime,$scope.sprintLength.value)//(boardData.boardCreated,1)
+                sampleTimes: cfdUtil.generateSampleTimes( 
+                    $scope.state.startTime,$scope.sprintLength.value)
             };
-            var throughputData = boardData.getThroughputReport(filter);
-            $scope.data = throughput.generateChartData(throughputData);
-            $scope.reportData = throughputData;
-            $scope.hasData = true;
-            $scope.dt = $scope.data[0].values[0][0];
              
+            $scope.reportData = boardData.getThroughputReport(filter);;
+            $scope.hasData = true;
             $scope.$apply();
+            console.log($scope.dt)
         },function(reject){});
     }
 
     $scope.startDateChanged = function () {
-        if(!new Date($scope.dt)){
-            return;
-        }
-        $scope.state.startTime = new Date($scope.dt).getTime();
+        
         updateReport();
     };
 
@@ -603,15 +678,9 @@ app.controller("ThroughputController",
     
     $scope.updateSprintLength = function() {
         if($scope.sprintLength){
-            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,$scope.sprintLengths)
+            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,$scope.sprintLength)
             updateReport();
         } 
-    };
-
-    $scope.open = function ($event) {
-        $event.preventDefault();
-        $event.stopPropagation();
-        $scope.opened = true;
     };
 
     updateReport();
@@ -629,12 +698,10 @@ app.controller("ThroughputController",
 app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state) {
 
     $scope.cfdData = [{"key" : "No data" , "values" : [ [ 0 , 0]]}];
-    $scope.dt = 0;
+    $scope.dt = new Date();
     $scope.hasData = false;
     $scope.startTime = 0;
     $scope.zeroDone = false;
-    $scope.filter = "";
-    var cfdRawChartData = [];
     
     
     console.log("cfdController");
@@ -642,66 +709,44 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     //download.setup($scope,"cfdData",cfd.readableDatesOnCfdData);
     $scope.dlFormat = cfd.readableDatesOnCfdData;
 
-    function updateCfd(cfdTableData) {
-        var cfdChartData;
-        if (cfdTableData.length === 0) {
-            return;
-        }
-        $scope.cfdDataTable = cfdTableData;
-        $scope.hasData = true;
-        $scope.dt = $scope.cfdDataTable[1][0];
-    }
-
-    $scope.toggleMin = function () {
-        $scope.start = $scope.start ? null : new Date();
-    };
-    $scope.toggleMin();
-
-    $scope.open = function ($event) {
-        $event.preventDefault();
-        $event.stopPropagation();
-        $scope.opened = true;
-    };
-
-
-    $scope.board = decodeUrl($routeParams.board);
-
-
-    boardDataFactory.getBoardData( $scope.board).then(function (response) {
-        var data ;
-        $scope.boardData = response;
-        data = $scope.boardData.getCfdData();
-        updateCfd(data);
-        $scope.start = data[1][0];
-        $scope.today = new Date();
-        $scope.$apply();
-    }, function (error) {
-        console.log("send message failed");
-    });
+    function updateCfd() {
+        setTimeout(()=>{
+            var filter = getFilterParameters();
+            $scope.cfdDataTable = $scope.boardData.getCfdData(filter);
+            if ($scope.cfdDataTable.length === 0) {
+                return;
+            }
+            $scope.hasData = true;
+            console.log($scope.dt);
+             $scope.$apply();
+        },50)
+        
+        
+   }
+    
+   
 
     function getFilterParameters(){
         var parameters = {};
         if(new Date($scope.dt).getTime() !== $scope.start){
             parameters.startMilliseconds = new Date($scope.dt).getTime();
-        }if($scope.filter !== ""){
-            parameters.text = $scope.filter;
         }
         return parameters;
     }
 
     $scope.startDateChanged = function () {
-        $scope.startTime = new Date($scope.dt).getTime();
-        var filter = getFilterParameters();
-        cfdDownloadData = $scope.boardData.getCfdData(filter);
-        updateCfd(cfdDownloadData);
+        console.log($scope.dt);
+        updateCfd();
     };
 
-    $scope.filterChanged = function () {
-        var parameter = {"text": $scope.filter};
-        cfdDownloadData = $scope.boardData.getCfdData(parameter);
-        updateCfd(cfdDownloadData);
-    };
-
+    boardDataFactory.getBoardData().then(function (response) {
+        $scope.boardData = response;
+        $scope.dt = new Date(parseInt(response.boardCreated));
+        updateCfd();
+        //$scope.$apply();
+    }, function (error) {
+        console.log("send message failed");
+    });
 
     $scope.$on('$viewContentLoaded', function (event) {
         $window._gaq.push(['_trackPageview', "CFD"]);

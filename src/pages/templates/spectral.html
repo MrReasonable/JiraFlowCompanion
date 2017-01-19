@@ -9,13 +9,16 @@
       
 		</div>
 	</div>
-
+</div>
+<div class="container" style="width: 100%;">
 	<div class="row">
 		<div class="col-lg-12">
 			
-			<spectral-graph data="spectralData" ng-show="hasData"></cfd-graph>
+			<spectral-graph data="spectralData" ng-show="hasData"></spectral-graph>
 		</div>
 	</div>
+</div>
+<div class="container" >
   <div class="row">
     <div class="col-me-2"> 
       
@@ -24,13 +27,7 @@
       
         <div class="col-md-4">
             <label>Start date:</label>
-						<p class="input-group">
-              
-							<input type="text" class="form-control" datepicker-popup="yyyy-MM-dd" ng-model="dt"  ng-change="startDateChanged()" is-open="opened" min-date="start" max-date="today" ng-required="true" close-text="Close" />
-              <span class="input-group-btn">
-                <button type="button" class="btn btn-default" ng-click="open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
-              </span>
-            </p>
+						<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
         </div>
 				<div class="col-md-4">
 						<div class="form-group">
