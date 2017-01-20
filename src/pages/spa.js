@@ -173,40 +173,50 @@ app.component("spectralGraph",{
       template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
       bindings: {
           data: '<',
+          samples:'<?'
       },
       controller: [ 'throughputFactory', function(throughput){
           var self = this;
-
+          self.samples = self.samples || 0;
           self.chartData;
           self.sum = 0; 
           this.$onChanges = function (changes) {
                 if (changes.data) {
                     self.chartData = transform(changes.data.currentValue);
                 }
+                /*if(changes.samples){
+                    self.samples = changes.samples.currentValue;
+                }else if(!self.samples){
+                    self.samples = 0;
+                }*/
           }; 
           
           function transform(data){
                 if(data){
                     let chartData = [];
                     let spectralData = throughput.createContinousData(data);
+                    let samples = self.samples||spectralData.length;
                     chartData.push(throughput.generateDataStream("Done tickets"
                                                                 ,"bar"
                                                                 ,1
                                                                 ,spectralData
                                                                 ,[
-                                                                        throughput.increaseIndexByOne
+                                                                    throughput.increaseIndexByOne
                                                                     ,throughput.transformToStream
+                                                                    ,_.curry(throughput.dropRight)(spectralData.length -samples)
                                                                 ]));
                     chartData.push(throughput.generateDataStream("Percent"
                                                                 ,"line"
                                                                 ,2
                                                                 ,spectralData
                                                                 ,[
-                                                                    throughput.transformToAccSum
+                                                                    throughput.increaseIndexByOne
+                                                                    ,throughput.transformToAccSum
                                                                     ,throughput.transformAccSumToAccPercentage
+                                                                    ,_.curry(throughput.dropRight)(spectralData.length -samples)
                                                                 ]));
                     
-                    self.sum = _.last(chartData[1].values).y;
+                    //self.sum = throughput.sum(data,1);
                     return chartData;
                 }
                 return ;
@@ -239,7 +249,7 @@ app.component("spectralGraph",{
                 },
                 yAxis2: {
                     tickFormat: function(d){
-                        return d3.format(',.0f')(d/self.sum*100);
+                        return d3.format(',.0f')(d);
                     }
                 },
 
@@ -295,7 +305,7 @@ app.component("throughputGraph",{
                                                                    ,throughput.transformToStream
                                                                 ]));
                     
-                    //self.sum = _.last(chartData[1].values).y;
+                    self.sum = _.last(chartData[1].values).y;
                     return chartData;
                 }
                 return ;
@@ -469,6 +479,7 @@ app.controller("SpectralController",
      $scope.data ;
      $scope.hasData = true;
      $scope.dt = new Date(state.startTime)||new Date();
+     $scope.samples;
 
     function updateReport(){
         
@@ -479,6 +490,11 @@ app.controller("SpectralController",
                 "starttime": state.startTime,
                 "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
             }
+            $scope.columns = boardData.columns;
+            if($scope.startState){
+                filter.startState = $scope.startState;
+            }
+            
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
             $scope.hasData = true;
             $scope.$apply();
@@ -544,7 +560,7 @@ app.factory("throughputFactory", function () {
         //console.log("original data =" + JSON.stringify(result));
         
         transform.forEach( function(trans){
-            result = result.map(trans);
+            result = trans(result);
         });
 
         //console.log("transformed data =" + JSON.stringify(result));
@@ -557,6 +573,10 @@ app.factory("throughputFactory", function () {
         };
     };
 
+    factory.dropRight = function(n,array){
+        return _.dropRight(array,n);
+    }
+    
     factory.createContinousData = function(data){
         let header = data.shift();
         let max = _.last(data)[0];
@@ -573,27 +593,35 @@ app.factory("throughputFactory", function () {
         return grid;
     }
 
-    factory.transformToStream = function(pair){
-        return{x:parseInt(pair[0]),y:pair[1]};
+    function mapWrapper(mapFunction){
+        return (arr)=>{
+            return arr.map(mapFunction);
+        }
     }
 
-    factory.increaseIndexByOne = function(pair){
+    factory.transformToStream = mapWrapper(function(pair){
+        return{x:parseInt(pair[0]),y:pair[1]};
+    });
+    
+    
+
+    factory.increaseIndexByOne = mapWrapper(function(pair){
         return [pair[0]+1,pair[1]];
-    }
+    });
 
     var sum;
 
-    factory.transformToAccSum = function(pair,index){
+    factory.transformToAccSum = mapWrapper(function(pair,index){
         if(index === 0){
             sum = 0
         }
         sum += pair[1];
         return{x:parseInt(pair[0]),y:sum};
-    }
+    });
 
     factory.rollingAverageTransformer = function(over){
         
-        return function(value,index,arr){
+        return mapWrapper(function(value,index,arr){
             let sum = 0;
             let samples = 0;
             let avg; 
@@ -604,23 +632,32 @@ app.factory("throughputFactory", function () {
                 }
             }
             avg = Math.floor(100*sum/samples)/100;
-            console.log("sum/samples=avg =" + sum +"/"+ samples +"=" + avg);
+            //console.log("sum/samples=avg =" + sum +"/"+ samples +"=" + avg);
             return [_.first(value),avg];
-        }
-    }
+        });
+    };
 
     
 
     
 
-    factory.transformAccSumToAccPercentage = function(value,index,arr){
+    factory.transformAccSumToAccPercentage = mapWrapper(function(value,index,arr){
         if(index === 0){
             sum = _.last(arr).y;
         }
         return{x:value.x,y:Math.floor(value.y/sum*100)};
+    })
+
+    factory.sum = (arr,index)=>{
+        let sum = 0;
+        arr.forEach((item)=>{
+            if(!isNaN(parseInt(item[index])) ){
+                sum+=item[index];
+            }
+            
+        });
+        return sum;
     }
-
-
 
      
     return factory;
@@ -635,7 +672,6 @@ app.controller("ThroughputController",
       console.log ("ThroughputController");
      $scope.data ;
      $scope.rollingAverage = 3;
-     $scope.today = new Date();
      $scope.hasData = false;
      $scope.state = state;
      $scope.dt = new Date(state.startTime)||new Date();
@@ -661,7 +697,6 @@ app.controller("ThroughputController",
     }
 
     $scope.startDateChanged = function () {
-        
         updateReport();
     };
 
@@ -672,6 +707,8 @@ app.controller("ThroughputController",
         {"value":3,"label":"3 weeks"},
         {"value":4,"label":"4 weeks"},
     ]
+
+    
 
     $scope.state.sprintLength = $scope.state.sprintLength || 0; 
     $scope.sprintLength = $scope.sprintLengths[$scope.state.sprintLength];

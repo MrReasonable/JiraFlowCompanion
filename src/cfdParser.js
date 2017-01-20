@@ -57,6 +57,9 @@ function BoardData(){
                 columnChange.id = item.key;
                 columnChange.enter = changeTime ;
                 columnChange.column = boardData.columns[item.columnTo];
+                //if(!columnChange.column){
+                    //console.log ("columnChange:" + JSON.stringify(item));
+                //}
                 self.registerColumnChange(columnChange);
             });
        }
@@ -221,7 +224,7 @@ function BoardData(){
         let done = self.columns[self.columns.length-1];
         let throughputReport =new ThroughputReport(filter);
         _.forEach(self.tickets,function(ticket){
-            throughputReport.registerDoneTicket( ticket.getDoneTime(self.columns[self.columns.length-1]));
+            throughputReport.registerDoneTicket( ticket.getDoneTime(_.last(self.columns)));
         });
         return throughputReport.getData();
     };
@@ -234,12 +237,12 @@ function BoardData(){
         filter = filter || {};
         let starttime = filter.starttime || 0;
         let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
+        let startState = filter.startState || _.first(self.columns);
         var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
         _.forEach(self.tickets, function(ticket){
             if(ticket.getDoneTime(done) && ticket.getDoneTime(done)>starttime ){
-                spectralAnalysisReport.registerLeadtime(ticket.getLeadtime(done));
+                spectralAnalysisReport.registerLeadtime(ticket.getLeadtime(done,startState));
             }
-            
         });
         return spectralAnalysisReport.getData();
     }
@@ -287,11 +290,17 @@ function Ticket(id){
         return _.first(columnChangeTimes());
     }
 
-    self.getLeadtime = function(doneState){
+    self.getLeadtime = function(doneState,startState){
         var  result = null;
         var done = self.getDoneTime(doneState);
+        
         if(done){
-            result = done -self.enteredBoard();
+            if(startState){
+                result = done - self.passedState(startState);
+            } else {
+                result = done -self.enteredBoard();
+            }
+            
         }
         return result;
     }
@@ -315,6 +324,18 @@ function Ticket(id){
         if(self.columnChanges[_.last(columnChanges)].column === doneState){
             result = _.last(columnChanges);
         }
+        return result;
+    }
+
+    self.passedState = (startState)=>{
+         let result = null;
+        _.forEach(self.columnChanges,(item)=>{
+           
+            if(item.column && item.column.index>=startState.index){
+                result = item.enter;
+                return false;
+            }
+        });
         return result;
     }
 
