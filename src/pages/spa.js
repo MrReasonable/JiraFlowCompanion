@@ -5,6 +5,45 @@
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
+app.component("quickFilters",{
+    template:` 
+    <div class="row">QuickFilters</div>
+    <div class="row" >
+        <div class="col-lg-12>
+            <div class="btn-group-lg">
+                <button ng-repeat="filter in $ctrl.quickFilters" class="{{ $ctrl.getClass(filter.id) }}" ng-click="$ctrl.toggle(filter.id)">{{filter.name}} </button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <button class="btn-primary" ng-click="$ctrl.apply()">Apply</buttom>
+    </div>
+    `,
+    bindings:{
+        quickFilters:'=',
+        apply:'&'
+    },
+    controller: function(){
+        self = this;
+        
+        function findFilter(id){
+            return self.quickFilters.find((filter)=>{
+                return filter.id === id
+            });
+        }
+        
+        self.getClass = (id)=>{
+            if(findFilter(id).selected){
+                return "btn-success";
+            }
+            return "btn_default";
+        }
+
+        self.toggle= (id)=>{
+            findFilter(id).selected = !findFilter(id).selected;
+        }
+    }
+});
 
 app.component ("datePicker",{
     template: ` <p class="input-group">
@@ -32,9 +71,6 @@ app.component ("datePicker",{
             $event.stopPropagation();
             self.opened = true;
         };
-
-        
- 
     }
 });
 
@@ -410,14 +446,12 @@ app.factory("boardDataFactory", function () {
     factory.fetchApiData = function(){
        let message = {type:"getUrl"}
        
-       
-       return new Promise( 
+       return new Promise(
            (resolve, reject) => {
                 
                 let eMPromise = sendExtensionMessage(message);
                 eMPromise.then(response => {
                     cfdUrl = new CfdUrl(response);
-                    
                     let configPromise =  sendRestRequest(cfdUrl.buildBoardConfigUrl());
                     let cfdDataPromise = sendRestRequest(cfdUrl.buildUrl());
                     return Promise.all([configPromise,cfdDataPromise]);
@@ -435,15 +469,31 @@ app.factory("boardDataFactory", function () {
                           
             });
     };
+
+    factory.updateApiData = ()=>{
+        return new Promise((resolve,reject)=>{
+            cfdUrl = data.cfdUrl;
+            let configPromise =  sendRestRequest(data.cfdUrl.buildBoardConfigUrl());
+            let cfdDataPromise = sendRestRequest(data.cfdUrl.buildUrl());
+            cfdUrl = data.cfdUrl;
+            Promise.all([configPromise,cfdDataPromise]).then(response => {
+                let boardConfig = _.first(response);
+                let cfdData = _.last(response)
+                data = new BoardData();
+                data.registerCfdApiResponce(cfdData);
+                data.registerBoardConfig(boardConfig);
+                data.registerCfdUrl(cfdUrl);
+                resolve(data);
+            });
+        })
+
+    }
     
     factory.getBoardData = function (url) {
          return new Promise(function (resolve, reject) {
              if(data){
                  resolve(data);
              }else{
-                //sendRestRequest(url).then(function(response){
-                //    data = CfdApiResponceParser().parse(response);
-                //    resolve(data);
                 factory.fetchApiData().then(boardData =>  {
                     data = boardData;
                     resolve(data)
@@ -593,24 +643,28 @@ app.factory("throughputFactory", function () {
         return grid;
     }
 
+    //utility function to return a function(array) that will apply return arr.map(mapFunction) 
     function mapWrapper(mapFunction){
         return (arr)=>{
             return arr.map(mapFunction);
         }
     }
 
+    // pair [1,2] -> {x:1,y:2}
+    //usage array.map()
     factory.transformToStream = mapWrapper(function(pair){
         return{x:parseInt(pair[0]),y:pair[1]};
     });
     
     
-
+    //make index 1 based [[0,22],[1,8]] -> [[1,22],[2,8]]
+    // usage array.map(increaseIndexByOne); 
     factory.increaseIndexByOne = mapWrapper(function(pair){
         return [pair[0]+1,pair[1]];
     });
 
+    // Accu
     var sum;
-
     factory.transformToAccSum = mapWrapper(function(pair,index){
         if(index === 0){
             sum = 0
@@ -754,15 +808,16 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
                 return;
             }
             $scope.hasData = true;
+           
             console.log($scope.dt);
-             $scope.$apply();
+            $scope.$apply();
         },50)
         
         
-   }
-    
-   
+    }
 
+    
+    
     function getFilterParameters(){
         var parameters = {};
         if(new Date($scope.dt).getTime() !== $scope.start){
@@ -780,7 +835,6 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
         $scope.boardData = response;
         $scope.dt = new Date(parseInt(response.boardCreated));
         updateCfd();
-        //$scope.$apply();
     }, function (error) {
         console.log("send message failed");
     });
@@ -788,6 +842,29 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     $scope.$on('$viewContentLoaded', function (event) {
         $window._gaq.push(['_trackPageview', "CFD"]);
     });
+
+}]);
+
+app.controller("SettingsController", ['$scope', 'boardDataFactory', function ($scope, boardDataFactory) {
+    
+    function getBoardData(){
+        
+        boardDataFactory.getBoardData().then(function(boardData){
+            $scope.boardData = boardData;
+            $scope.quickFilters = $scope.boardData.getQuickfilters();
+            $scope.$apply();
+        },function(reject){});
+    }
+
+    $scope.apply = ()=>{
+        console.log("Apply");
+        $scope.boardData.setActiveQuickFilters($scope.quickFilters);
+        boardDataFactory.updateApiData().then(function (response) {
+            getBoardData();
+        });
+    };
+
+    getBoardData();
 
 }]);
 
@@ -801,6 +878,7 @@ app.controller("TabController", [
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
             $scope.tabs.push({"caption": "Throughput", "active": false, "route": "/throughput/"});
             $scope.tabs.push({"caption": "Spectral", "active": false, "route": "/spectral/"});
+            $scope.tabs.push({"caption": "Settings", "active": false, "route": "/settings/"});
 
             
             $scope.setActiveTab = function (url) {
@@ -826,6 +904,7 @@ app.controller("TabController", [
 
 
 
+
 app.config(['$routeProvider',
     function ($routeProvider) {
         $routeProvider.
@@ -838,13 +917,10 @@ app.config(['$routeProvider',
             }).when('/spectral/:board/:id', {
                 templateUrl: 'templates/spectral.html',
                 controller: 'SpectralController'
-            })/*.when('/flowreport/:board', {
-                templateUrl: 'templates/flowreport.html',
-                controller: 'FlowReportController'
-            }).when('/cycletime/:board', {
-                templateUrl: 'templates/cycletime.html',
-                controller: 'CycletimeController'
-            })*/.otherwise({
+            }).when('/settings/:board/:id', {
+                templateUrl: 'templates/settings.html',
+                controller: 'SettingsController'
+            }).otherwise({
                 redirectTo: '/cfd/:board/:id'
             });
     }

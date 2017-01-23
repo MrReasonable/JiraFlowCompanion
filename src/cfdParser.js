@@ -131,6 +131,31 @@ function BoardData(){
         return filterNames;
     }
 
+    self.getQuickfilters = ()=>{
+        let quickFilters = _.cloneDeep(self.quickFilters);
+        let activeFilters = self.cfdUrl.query.quickFilter;
+        if(!quickFilters){
+            return {};
+        }
+        quickFilters.forEach((filter)=>{
+            if(-1 != activeFilters.indexOf(""+filter.id)){
+                filter.selected = true;
+            }else{
+                filter.selected = false;
+            }
+        });
+        return quickFilters;
+    }
+
+    self.setActiveQuickFilters = (quickFilters)=>{
+        let activeFilters = [];
+        quickFilters.forEach(filter=>{
+            if(filter.selected){
+                activeFilters.push(""+filter.id);
+            }
+        });
+        self.cfdUrl.query.quickFilter = activeFilters;
+    }
 
 
     function  cfdSampleTimes(filter){
@@ -321,7 +346,7 @@ function Ticket(id){
     self.getDoneTime = function(doneState){
         let result = null;
         let columnChanges = columnChangeTimes();
-        if(self.columnChanges[_.last(columnChanges)].column === doneState){
+        if(self.columnChanges[_.last(columnChanges)].column.name === doneState.name){
             result = _.last(columnChanges);
         }
         return result;

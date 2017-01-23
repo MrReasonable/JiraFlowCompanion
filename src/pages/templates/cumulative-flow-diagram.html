@@ -18,38 +18,37 @@
   <div class="row">
     <div class="col-me-2"> 
       
-    <div class="row">
-      
-        <div class="col-md-4">
-          <h4>Start Date</h4>
-        </div>
-        <!--div class="col-md-4">
-          <h4>Filter by card title </h4>
-            
-        </div-->
-        <div class="col-md-2">
-          <h4>Export Data </h4>
-        </div>
-    </div>
+        <div class="row">
 
-    <div class="row">
-      
-        <div class="col-md-4">
-            <date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
-        </div>
-        <div class="col-md-2">
-                <download filename="CumulativeFlowData" format="dlFormat", data="cfdDataTable" ></download>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="checkbox">
-                <label><input type="checkbox" ng-model="zeroDone" ng-change="startDateChanged()">Done starts from 0</label>
+            <div class="col-md-4">
+              Start Date
+            </div>
+            <!--div class="col-md-4">
+              <h4>Filter by card title </h4>
+
+            </div-->
+            <div class="col-md-2">
+              Export data
             </div>
         </div>
-        
 
-    </div>
+        <div class="row">
+
+            <div class="col-md-4">
+                <date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
+            </div>
+            <div class="col-md-2">
+                    <download filename="CumulativeFlowData" format="dlFormat", data="cfdDataTable" ></download>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="checkbox">
+                    <label><input type="checkbox" ng-model="zeroDone" ng-change="startDateChanged()">Done starts from 0</label>
+                </div>
+            </div>
+        </div>
+        <!--quick-filters quick-filters="quickFilters" apply="reload()" ></quick-filters-->
     </div>
   </div>
 </div>
