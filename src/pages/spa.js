@@ -304,7 +304,7 @@ app.component("spectralGraph",{
 
 
 app.component("throughputGraph",{
-      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
+      template: `<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>`,
       bindings: {
           data: '<',
           rollingAverage: '<'
@@ -324,6 +324,7 @@ app.component("throughputGraph",{
                 if(data){
                     let chartData = [];
                     let throughputData = data;
+                    
                     chartData.push(throughput.generateDataStream("Done tickets"
                                                                 ,"bar"
                                                                 ,1
@@ -341,7 +342,7 @@ app.component("throughputGraph",{
                                                                    ,throughput.transformToStream
                                                                 ]));
                     
-                    self.sum = _.last(chartData[1].values).y;
+                    self.sum =throughput.sum(data,1);
                     return chartData;
                 }
                 return ;
@@ -535,6 +536,7 @@ app.controller("SpectralController",
         
         boardDataFactory.getBoardData().then(function(boardData){
             let spectralData;
+            state.startTime = new Date($scope.dt).getTime();
             $scope.boardData = boardData;
             let filter = {
                 "starttime": state.startTime,
@@ -546,6 +548,9 @@ app.controller("SpectralController",
             }
             
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
+            $scope.sum = throughput.sum($scope.spectralData,1);
+            $scope.average = throughput.averageLeadtime($scope.spectralData);
+            $scope.median = throughput.medianLeadtime($scope.spectralData);
             $scope.hasData = true;
             $scope.$apply();
         },function(reject){});
@@ -693,25 +698,60 @@ app.factory("throughputFactory", function () {
 
     
 
-    
+    // data = [[1,2],[3,4]]
+    // sum = facory.sum(data,1);
+    // sum = 6
 
+    factory.sum = (data,column)=>{
+        column = column || 1;
+        let sum = 0;
+        data.forEach(row =>{
+            if(!isNaN(row[column])){
+                sum +=  row[column];
+            }
+        });
+        return sum;
+    };
+
+
+    
+    factory.averageLeadtime = data => {
+        let total= 0;
+        const oneBased = 1;
+        const iLeadtime = 0;
+        const iDoneTockets = 1 
+        data.forEach(row =>{
+            if(!isNaN(row[iLeadtime]) && !isNaN(row[iDoneTockets])){
+               total +=  (oneBased+row[iLeadtime])*row[iDoneTockets];
+            }
+           
+        });
+        return Math.ceil(total/factory.sum(data,1));
+    };
+
+   
+    factory.medianLeadtime = data => {
+        let halfThroghput= factory.sum(data,1)/2;
+        let sum = 0;
+        let median = 0;
+        _.forEach(data,row =>{
+            if(!isNaN(row[1])){
+                sum +=  row[1];
+            }
+            if(sum >= halfThroghput){
+                   median = 1+ row[0];
+                   return false; 
+            }
+        });
+        return median;
+    };
+    
     factory.transformAccSumToAccPercentage = mapWrapper(function(value,index,arr){
         if(index === 0){
             sum = _.last(arr).y;
         }
         return{x:value.x,y:Math.floor(value.y/sum*100)};
-    })
-
-    factory.sum = (arr,index)=>{
-        let sum = 0;
-        arr.forEach((item)=>{
-            if(!isNaN(parseInt(item[index])) ){
-                sum+=item[index];
-            }
-            
-        });
-        return sum;
-    }
+    });
 
      
     return factory;
@@ -738,12 +778,15 @@ app.controller("ThroughputController",
             $scope.state.startTime = new Date($scope.dt).getTime();
             console.log($scope.dt)
             $scope.boardData = boardData;
+
             var filter = {
                 sampleTimes: cfdUtil.generateSampleTimes( 
                     $scope.state.startTime,$scope.sprintLength.value)
             };
              
             $scope.reportData = boardData.getThroughputReport(filter);;
+            $scope.sum = throughput.sum($scope.reportData,1);
+            $scope.average = Math.floor($scope.sum/$scope.reportData.length-2);
             $scope.hasData = true;
             $scope.$apply();
             console.log($scope.dt)

@@ -3,6 +3,7 @@ function Url(location){
     self.host = location.hostname||location.host;
     self.path = location.pathname||location.path;
     self.protocol = location.protocol||location.protocol;
+    self.port = location.port;
     self.query = location.query||parseUrlQueryString(location.search);
 
     function parseUrlQueryString(queryString) {
@@ -32,20 +33,23 @@ function CfdUrl(location){
     }
 
     url.buildBoardConfigUrl = function(){
-        return urlBuilder("/rest/greenhopper/1.0/rapidviewconfig/editmodel.json",
+        return urlBuilder("rest/greenhopper/1.0/rapidviewconfig/editmodel.json",
                           function(query){
                               return "?rapidViewId="+query.rapidView[0];
                           });
     }
 
     function urlBuilder(path,queryBuilder){
+        var port = (url.port === 80)?"":":"+url.port;
         var result = url.protocol +"//"
-                    + url.host 
+                    + url.host
+                    + port 
                     + url.path.replace(
                         "secure/RapidBoard.jspa"
                         ,path
                     ) 
                     + queryBuilder(url.query);
+        console.log("Url Built:" + result);
         return result;
     }
     
