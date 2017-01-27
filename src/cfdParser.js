@@ -57,9 +57,7 @@ function BoardData(){
                 columnChange.id = item.key;
                 columnChange.enter = changeTime ;
                 columnChange.column = boardData.columns[item.columnTo];
-                //if(!columnChange.column){
-                    //console.log ("columnChange:" + JSON.stringify(item));
-                //}
+                
                 self.registerColumnChange(columnChange);
             });
        }
@@ -121,7 +119,9 @@ function BoardData(){
     self.getActiveQuickfilters = function(){
         let filters = self.cfdUrl.query.quickFilter;
         let filterNames = [];
-        
+        if(!filters){
+            return filterNames;
+        }
         filters.forEach(filter=>{
             let qf = self.quickFilters.find(quickFilter=>{
                 return quickFilter.id === parseInt(filter); 
@@ -133,8 +133,8 @@ function BoardData(){
 
     self.getQuickfilters = ()=>{
         let quickFilters = _.cloneDeep(self.quickFilters);
-        let activeFilters = self.cfdUrl.query.quickFilter;
-        if(!quickFilters){
+        let activeFilters = self.cfdUrl.query.quickFilter||[];
+        if(!quickFilters || !activeFilters){
             return {};
         }
         quickFilters.forEach((filter)=>{
@@ -157,6 +157,7 @@ function BoardData(){
         self.cfdUrl.query.quickFilter = activeFilters;
     }
 
+    
 
     function  cfdSampleTimes(filter){
         var start = self.boardCreated;
@@ -252,6 +253,12 @@ function BoardData(){
             throughputReport.registerDoneTicket( ticket.getDoneTime(_.last(self.columns)));
         });
         return throughputReport.getData();
+    };
+
+    self.getIterationReport = (startTime,duration,startState)=>{
+        let iterationReport = new IterationReport(startTime,duration,_.last(self.columns),startState);
+        _.forEach(self.tickets,iterationReport.registerTicket);
+        return iterationReport.getData();
     };
 
     // filter {resolution:milliseconds,starttime:milliseconds}
@@ -427,8 +434,46 @@ function SpectralAnalysisReport(resolution ){
             return a[0]-b[0];
         })
        data.unshift(["Leadtime","item count"]); 
-       console.log(JSON.stringify(data));
+       //console.log(JSON.stringify(data));
        return  data;
     } 
     return self;
+}
+
+function IterationReport(startTime,duration,doneState,startState){
+    const self = this;
+    const tickets = [];
+    
+    self.registerTicket= (ticket) =>{
+        let doneTime = ticket.getDoneTime(doneState); 
+        if(doneTime && doneTime<startTime+duration && doneTime > startTime ){
+            tickets.push(ticket);
+        }
+    }
+
+    
+
+    self.getData = () =>{
+        let data = [];
+        function columnNameOrEmpty(ticket,startTime){
+            result = "";
+            if(ticket.wasInColumn(startTime)){
+                result = ticket.wasInColumn(startTime);
+            }
+            return result
+        }
+    
+        data.push(["Ticket","Done","Lead time","Cycle time","Started in"])
+        tickets.forEach(ticket=>{
+            let row = [
+                ticket.id,
+                ticket.getDoneTime(doneState),
+                ticket.getLeadtime(doneState),
+                (startState)?ticket.getLeadtime(doneState,startState):null,
+                columnNameOrEmpty(ticket,startTime)
+            ];
+            data.push(row);
+        });
+        return data;
+    }
 }

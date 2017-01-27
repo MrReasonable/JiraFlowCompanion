@@ -32,8 +32,9 @@ function objectDataIsEqual(obj1, obj2) {
 }
 
 function TimeUtil() {
-    this.MILLISECONDS_DAY = 86400000; //24*60*60*1000=86400000
-    this.MILLISECONDS_HOUR = this.MILLISECONDS_DAY / 24;
+    const self = this;
+    self.MILLISECONDS_DAY = 86400000; //24*60*60*1000=86400000
+    self.MILLISECONDS_HOUR = this.MILLISECONDS_DAY / 24;
     this.now = function () {
         return new Date();
     };
@@ -88,20 +89,24 @@ function TimeUtil() {
     };
 
     this.isoDateFormat = function (milliseconds) {
-        var time = new Date(milliseconds);
+        var time = new Date(parseInt(milliseconds));
         var formatedDate = "" + time.getFullYear() + "-" + twoDigits(time.getMonth() + 1) +
             "-" + twoDigits(time.getDate());
         return formatedDate;
     };
 
     this.timeFormat = function (milliseconds) {
-        time = new Date(milliseconds);
-        var days = Math.floor(milliseconds / this.MILLISECONDS_DAY);
+        milliseconds = parseInt(milliseconds);
+        if(!milliseconds){
+            return;
+        }
+        let time = new Date(milliseconds);
+        var days = Math.floor(milliseconds / self.MILLISECONDS_DAY);
         var hours;
         var minutes;
-        milliseconds = milliseconds % this.MILLISECONDS_DAY;
-        hours = Math.floor(milliseconds / (this.MILLISECONDS_HOUR));
-        minutes = Math.floor((milliseconds % this.MILLISECONDS_HOUR) / 60000);
+        milliseconds = milliseconds % self.MILLISECONDS_DAY;
+        hours = Math.floor(milliseconds / (self.MILLISECONDS_HOUR));
+        minutes = Math.floor((milliseconds % self.MILLISECONDS_HOUR) / 60000);
         return "" + days + ":" + twoDigits(hours) + ":" + twoDigits(minutes);
     };
 
@@ -371,7 +376,44 @@ var cfdUtil = {
         }
         return copy;
     }
-
-
 };
+
+reportHelpers = {
+    columnToReadableDates:(grid,columns)=>{
+        columns = columns || 0;
+        
+        if(!_.isArray(columns)){
+            columns = [columns]
+        }
+
+        return grid.map(row=>{
+            
+            columns.forEach((col)=>{
+                if(parseInt(row[col])){
+                    row[col] = timeUtil.isoDateFormat(row[col]);
+                }
+            })
+            return row;
+        });
+    },
+
+    //tansforms the grid contents with the provided functions by columns
+    // example
+    // let data = [[1.5,2],[2.5,1]];
+    // let result = data.map(reportHelpers.formatGrid([Math.floor,x=>x/2]));
+    // result === [[1,1],[2,0.5]];
+    formatGrid:(formatters)=>{
+       let mapFunc = (row)=>{
+           formatters.forEach((formatter,index)=>{
+               if(_.isFunction(formatter)&& !isNaN(row[index])){
+                  row[index] = formatter(row[index]); 
+               }
+           });
+           return row;
+       } 
+       return mapFunc;  
+    }
+
+
+}
 

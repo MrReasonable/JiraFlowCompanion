@@ -5,6 +5,56 @@
 console.log(window.location.href);
 var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
 
+
+app.component("iterationReportTable",{
+    template:`<table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th  ng-repeat="cell in $ctrl.head track by $index">
+                            {{cell}}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr  ng-repeat="row in $ctrl.data  track by $index">
+                        <td >
+                            <label><a href="{{$ctrl.url}}{{row[0]}}" target="_blank"> {{row[0]}}</a></label>
+                        </td>
+                        <td>
+                            {{row[1]}}
+                        </td>
+                        <td>
+                            {{row[2]}}
+                        </td>
+                        <td>
+                            {{row[3]}}
+                        </td>
+                        <td>
+                            {{row[4]}}
+                        </td>
+                    </tr>
+                </tbody>
+              </table>`,
+    bindings:{
+        reportData: '<',
+        url:'<'
+    },
+    controller:function(){
+        console.log("linkUrl:"+this.url);
+        let self = this;
+        self.$onChanges = function (changes) {
+                if (changes.reportData) {
+                    let reportData = _.cloneDeep(changes.reportData.currentValue);
+                    if(reportData){
+                        self.head = reportData.shift();
+                        self.data = reportData;
+                    }
+                    
+                }
+          };  
+    }
+});
+
 app.component("quickFilters",{
     template:` 
     <div class="row">QuickFilters</div>
@@ -119,7 +169,7 @@ app.component("quickfilters",{
 
         function format (){
             var data = self.data;
-            if(self.format){
+            if(_.isFunction(self.format())){
                 data = self.format()(data);
             }
             return data;
@@ -220,11 +270,6 @@ app.component("spectralGraph",{
                 if (changes.data) {
                     self.chartData = transform(changes.data.currentValue);
                 }
-                /*if(changes.samples){
-                    self.samples = changes.samples.currentValue;
-                }else if(!self.samples){
-                    self.samples = 0;
-                }*/
           }; 
           
           function transform(data){
@@ -252,7 +297,7 @@ app.component("spectralGraph",{
                                                                     ,_.curry(throughput.dropRight)(spectralData.length -samples)
                                                                 ]));
                     
-                    //self.sum = throughput.sum(data,1);
+                    
                     return chartData;
                 }
                 return ;
@@ -289,7 +334,7 @@ app.component("spectralGraph",{
                     }
                 },
 
-                //forceX:[0, 900]
+                
                 
             }
         };
@@ -313,7 +358,6 @@ app.component("throughputGraph",{
           var self = this;
 
           self.chartData;
-          //self.sum = 0; 
           this.$onChanges = function (changes) {
                 if (changes.data) {
                     self.chartData = transform(changes.data.currentValue);
@@ -882,9 +926,6 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
         console.log("send message failed");
     });
 
-    $scope.$on('$viewContentLoaded', function (event) {
-        $window._gaq.push(['_trackPageview', "CFD"]);
-    });
 
 }]);
 
@@ -912,6 +953,59 @@ app.controller("SettingsController", ['$scope', 'boardDataFactory', function ($s
 }]);
 
 
+app.controller("IterationReportController",['$scope', 'boardDataFactory', function ($scope, boardDataFactory){
+    $scope.dt = new Date();
+    $scope.dt.setDate($scope.dt.getDate()-7);
+    $scope.hasData = false;
+    $scope.startTime = 0;
+    $scope.url = "";
+
+     $scope.startDateChanged = function () {
+        updateReport();
+    };
+
+
+    $scope.sprintLengths = [
+        {"value":1,"label":"1 week"},
+        {"value":2,"label":"2 weeks"},
+        {"value":3,"label":"3 weeks"},
+        {"value":4,"label":"4 weeks"},
+    ]
+
+    $scope.sprintLength = $scope.sprintLengths[0];
+    
+    $scope.updateSprintLength = function() {
+            updateReport();
+    };
+
+    $scope.startStateChanged = ()=>{
+        updateReport();
+    }
+
+    function updateReport(){
+        
+        boardDataFactory.getBoardData().then(function(boardData){
+            $scope.startTime = new Date($scope.dt).getTime();
+            $scope.boardData = boardData;
+            $scope.columns = boardData.columns;
+        
+            $scope.url = $scope.boardData.cfdUrl.buildJiraIssueUrl("");        
+            let reportData =  boardData.getIterationReport($scope.startTime
+                                                          ,$scope.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
+                                                          ,$scope.startState);
+            $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
+            $scope.hasData = true;
+            $scope.jiraIssues = boardData.cfdUrl.findIssuesByIssuekeys(_.tail(reportData),0);
+            $scope.$apply();
+        },function(reject){});
+    }
+ 
+   
+    updateReport();
+
+}]);
+
+
 app.controller("TabController", [
         '$scope',
         '$location',
@@ -920,7 +1014,8 @@ app.controller("TabController", [
             $scope.tabs = [];
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
             $scope.tabs.push({"caption": "Throughput", "active": false, "route": "/throughput/"});
-            $scope.tabs.push({"caption": "Spectral", "active": false, "route": "/spectral/"});
+            $scope.tabs.push({"caption": "Spectral analysis", "active": false, "route": "/spectral/"});
+            $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
             $scope.tabs.push({"caption": "Settings", "active": false, "route": "/settings/"});
 
             
@@ -935,8 +1030,8 @@ app.controller("TabController", [
             };
 
             $scope.goTo = function (route) {
-                $location.url(route + $routeParams.board + "/" + $routeParams.id);
-                $scope.setActiveTab($location.url())
+                $location.url(route + $routeParams.protocol + "/" + $routeParams.host +"/"+ $routeParams.query);
+                $scope.setActiveTab($location.url());
                 $scope.boardUrl = _.last($location.url().split("/"));
             };
 
@@ -949,22 +1044,27 @@ app.controller("TabController", [
 
 
 app.config(['$routeProvider',
+    
     function ($routeProvider) {
+        let jiraUrl = ":protocol/:host/:query/";
         $routeProvider.
-            when('/cfd/:board/:id', {
+            when('/cfd/'+jiraUrl, {
                templateUrl: 'templates/cumulative-flow-diagram.html',
                controller: 'CfdController'
-            }).when('/throughput/:board/:id', {
+            }).when('/throughput/'+jiraUrl, {
                 templateUrl: 'templates/throughput.html',
                 controller: 'ThroughputController'
-            }).when('/spectral/:board/:id', {
+            }).when('/spectral/'+jiraUrl, {
                 templateUrl: 'templates/spectral.html',
                 controller: 'SpectralController'
-            }).when('/settings/:board/:id', {
+            }).when('/iteration-report/'+jiraUrl, {
+                templateUrl: 'templates/iterationReport.html',
+                controller: 'IterationReportController'
+            }).when('/settings/'+jiraUrl, {
                 templateUrl: 'templates/settings.html',
                 controller: 'SettingsController'
             }).otherwise({
-                redirectTo: '/cfd/:board/:id'
+                redirectTo: '/cfd/'+jiraUrl
             });
     }
 ]);

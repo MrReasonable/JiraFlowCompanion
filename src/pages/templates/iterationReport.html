@@ -1,0 +1,48 @@
+<div class="container">
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="well">
+                <h1>Iteration Report (BETA)</h1>
+                <quickfilters board-data="boardData"></quickfilters>
+            </div>
+		</div>
+	</div>
+
+    <div class="row">
+
+        <div class="col-md-4">
+            <label>Iteration start date:</label>
+            <date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
+        </div>
+        <div class="col-md-4">
+                <div class="form-group">
+      				<label>IterationLength(weeks):</label>
+      				<select class="form-control" ng-model="sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths" >
+					</select>
+    		    </div>
+        </div>
+        <div class="col-md-4">   
+            <div class="form-group">
+      				<label>Start state:</label>
+      				<select class="form-control" ng-model="startState" ng-change="startStateChanged()" ng-options="item.name for item in columns" >
+				    </select>
+		    </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-10">
+            <h4>Done tickets</h4>
+        </div>
+        <div class="col-lg-2">
+           <a calss" button-default " href="{{jiraIssues}}" target="_blank">See in Jira</a>
+        </div>
+    </div> 
+    <iteration-report-table report-data="reportData" url="url"></iteration-report-table> 
+    	<div class="row">
+			<div class="col-md-8">
+         <download filename="IterationReport"  data="reportData" ></download>
+        </div>
+		</div>
+    </div>
+  </div>
+</div>

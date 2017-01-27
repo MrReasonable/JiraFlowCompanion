@@ -29,7 +29,7 @@ function CfdUrl(location){
     let url  = new Url(location);   
 
     url.buildUrl = function(){
-       return urlBuilder("rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json", buildCfdQueryString);
+       return urlBuilder("rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json", url.buildCfdQueryString);
     }
 
     url.buildBoardConfigUrl = function(){
@@ -39,11 +39,32 @@ function CfdUrl(location){
                           });
     }
 
+    url.hostWithPort= ()=>{
+        var port = (url.port)?":"+url.port:url.port;
+        return url.host + port;
+    }
+    
+    url.buildRootUrl = function (){
+        return url.protocol +"//"
+                    + url.hostWithPort()
+    }
+
+    url.buildJiraIssueUrl = (issueKey)=>{
+         return url.buildRootUrl()
+                    + "/browse/"
+                    + issueKey;
+    }
+
+    
+    url.findIssuesByIssuekeys = function(issues,index){
+        let query = jql.findIssuesInArray(issues,index);
+        return url.buildRootUrl()
+                +"/issues/?jql="
+                +encodeURIComponent(query);
+    }
+
     function urlBuilder(path,queryBuilder){
-        var port = (url.port === 80)?"":":"+url.port;
-        var result = url.protocol +"//"
-                    + url.host
-                    + port 
+        var result = url.buildRootUrl() 
                     + url.path.replace(
                         "secure/RapidBoard.jspa"
                         ,path
@@ -53,8 +74,11 @@ function CfdUrl(location){
         return result;
     }
     
-    function buildCfdQueryString(query){
+    url.buildCfdQueryString = (query)=>{
         var result = "";
+        if(query === undefined){
+            query = url.query;
+        }
         _.forEach(query, function(values,key){
             if(key != "view" & key != "chart" ){
                 values.forEach(function(value){
@@ -70,6 +94,14 @@ function CfdUrl(location){
         return url.query.rapidView
     }
 
+    url.getProtocol = ()=>{
+        return url.protocol//.replace(":","");
+    }
+
+    url.getUriFriendlyHostWithPort =()=>{
+        return encodeURIComponent(url.hostWithPort());
+    }
+
     url.getHostWithProtocol = function(){
         return  url.protocol +"//"+ url.host
     }
@@ -77,4 +109,19 @@ function CfdUrl(location){
     return url;
 
 }
+
+
+let jql = {
+    findIssuesInArray:function(arr,index){
+        let issues;
+        if(_.isUndefined(index)){
+            index = 0;
+        }
+        issues = arr.map( issue => issue[index]);
+
+        return "issueKey in ("+issues.toString()+")"
+    }
+}
+
+
 

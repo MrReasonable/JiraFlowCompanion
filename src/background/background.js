@@ -13,7 +13,10 @@ function messageHandler (request, sender, sendResponse) {
                 console.log("spa page for"  + url + " requested");
                     page = page+"#!/cfd/";
                 
-                let newURL = "pages/"+page + cfdUrl.host +"/"+ cfdUrl.getBoardId();//+encodeUrl(url);
+                let newURL = "pages/"+page 
+                    + cfdUrl.getProtocol() +"/"
+                    + cfdUrl.getUriFriendlyHostWithPort() +"/"
+                    + cfdUrl.buildCfdQueryString().replace("?","");//+encodeUrl(url);
                 chrome.tabs.create({ url: newURL });
                 sendResponse("OK");
                 console.log("open-data-page handled spa.html#/cfd/"+ request.page +" opened");
