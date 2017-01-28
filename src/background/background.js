@@ -1,4 +1,4 @@
-let cfdUrl;
+let jiraUrl;
 function messageHandler (request, sender, sendResponse) {
     "use strict";
     var data,settings,key;
@@ -8,15 +8,13 @@ function messageHandler (request, sender, sendResponse) {
         case "open-data-page"://board triggering spa page opening
            
                 let page = "spa.html";
-                cfdUrl = new CfdUrl(request.page);
-                let url = cfdUrl.buildUrl();
+                jiraUrl = new JiraUrl(request.page);
+                let url = jiraUrl.cfdApiUrl();
                 console.log("spa page for"  + url + " requested");
                     page = page+"#!/cfd/";
                 
                 let newURL = "pages/"+page 
-                    + cfdUrl.getProtocol() +"/"
-                    + cfdUrl.getUriFriendlyHostWithPort() +"/"
-                    + cfdUrl.buildCfdQueryString().replace("?","");//+encodeUrl(url);
+                    + jiraUrl.angularUrl();
                 chrome.tabs.create({ url: newURL });
                 sendResponse("OK");
                 console.log("open-data-page handled spa.html#/cfd/"+ request.page +" opened");
@@ -25,7 +23,7 @@ function messageHandler (request, sender, sendResponse) {
             break;
         case "getUrl":
             
-            sendResponse(cfdUrl);
+            sendResponse(jiraUrl);
             break;
     }
     return true;

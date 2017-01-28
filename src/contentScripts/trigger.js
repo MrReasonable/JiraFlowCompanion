@@ -15,9 +15,9 @@ function addButton() {
         //textbox.setAttribute("style","padding-left:10px;");
         $('#ghx-view-selector').append(textbox);
         $("#trigger-button").click(function(){
-        var cfdUrl = new CfdUrl(window.location);
-        console.log("CFDURL: " + cfdUrl.buildUrl());
-        sendExtensionMessage({"type":"open-data-page","page":cfdUrl});
+        var jiraUrl = new JiraUrl(window.location);
+        console.log("jiraUrl: " + jiraUrl.cfdApiUrl());
+        sendExtensionMessage({"type":"open-data-page","page":jiraUrl});
     });
         console.log("button Appended");
     }

@@ -482,56 +482,42 @@ app.factory("cfdFactory", function () {
 });
 
 
-app.factory("boardDataFactory", function () {
+app.factory("boardDataFactory",['$routeParams', function (routeParams) {
     var factory = {};
     var data;
-    var cfdUrl;
+    var jiraUrl;
     var boardConfig; 
+    
+    function parseRouteParams(){
+        let url = {};
+        let hostParts;
+        url.protocol = routeParams.protocol;
+        hostParts = routeParams.host.split(":")
+        url.host = _.first(hostParts);
+        url.port = (hostParts.length = 2)?_.last(hostParts):"";
+        url.query = JiraUrl().parseAngularQueryString(routeParams.query);
+        return new JiraUrl(url); 
+    }
 
     factory.fetchApiData = function(){
-       let message = {type:"getUrl"}
-       
-       return new Promise(
-           (resolve, reject) => {
-                
-                let eMPromise = sendExtensionMessage(message);
-                eMPromise.then(response => {
-                    cfdUrl = new CfdUrl(response);
-                    let configPromise =  sendRestRequest(cfdUrl.buildBoardConfigUrl());
-                    let cfdDataPromise = sendRestRequest(cfdUrl.buildUrl());
-                    return Promise.all([configPromise,cfdDataPromise]);
-                }).then( response =>{
-                        let boardConfig = _.first(response);
-                        let cfdData = _.last(response)
-                        boardData = new BoardData();
-                        boardData.registerCfdApiResponce(cfdData);
-                        boardData.registerBoardConfig(boardConfig);
-                        boardData.registerCfdUrl(cfdUrl);
-                        resolve(boardData);
-                    }
-                );
-
-                          
-            });
-    };
-
-    factory.updateApiData = ()=>{
-        return new Promise((resolve,reject)=>{
-            cfdUrl = data.cfdUrl;
-            let configPromise =  sendRestRequest(data.cfdUrl.buildBoardConfigUrl());
-            let cfdDataPromise = sendRestRequest(data.cfdUrl.buildUrl());
-            cfdUrl = data.cfdUrl;
+       jiraUrl = parseRouteParams();
+       return new Promise((resolve,reject)=>{
+            let configPromise =  sendRestRequest(jiraUrl.boardConfigApiUrl());
+            let cfdDataPromise = sendRestRequest(jiraUrl.cfdApiUrl());
             Promise.all([configPromise,cfdDataPromise]).then(response => {
                 let boardConfig = _.first(response);
                 let cfdData = _.last(response)
                 data = new BoardData();
                 data.registerCfdApiResponce(cfdData);
                 data.registerBoardConfig(boardConfig);
-                data.registerCfdUrl(cfdUrl);
+                data.registerjiraUrl(jiraUrl);
                 resolve(data);
             });
         })
+    };
 
+    factory.updateBoardData = ()=>{
+        return factory.fetchApiData();
     }
     
     factory.getBoardData = function (url) {
@@ -550,7 +536,7 @@ app.factory("boardDataFactory", function () {
     };
          
     return factory;
-});
+}]);
 
 app.factory("sharedState",function(){
     var state = {
@@ -884,7 +870,6 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     
     console.log("cfdController");
 
-    //download.setup($scope,"cfdData",cfd.readableDatesOnCfdData);
     $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     function updateCfd() {
@@ -929,7 +914,12 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
 
 }]);
 
-app.controller("SettingsController", ['$scope', 'boardDataFactory', function ($scope, boardDataFactory) {
+app.controller("SettingsController", [
+    '$scope',
+    '$location',
+    '$routeParams', 
+    'boardDataFactory', 
+    function ($scope,$location,$routeParams, boardDataFactory) {
     
     function getBoardData(){
         
@@ -946,7 +936,13 @@ app.controller("SettingsController", ['$scope', 'boardDataFactory', function ($s
         boardDataFactory.updateApiData().then(function (response) {
             getBoardData();
         });
+        updateUrl("/settings/");
     };
+
+     updateUrl = function (route) {
+                $location.url(route + $scope.boardData.angularUrl());
+                console.log("New url :"  +$location.url());
+            };
 
     getBoardData();
 
@@ -989,13 +985,13 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory', functi
             $scope.boardData = boardData;
             $scope.columns = boardData.columns;
         
-            $scope.url = $scope.boardData.cfdUrl.buildJiraIssueUrl("");        
+            $scope.url = $scope.boardData.jiraUrl.issueUrl("");        
             let reportData =  boardData.getIterationReport($scope.startTime
                                                           ,$scope.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
                                                           ,$scope.startState);
             $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
             $scope.hasData = true;
-            $scope.jiraIssues = boardData.cfdUrl.findIssuesByIssuekeys(_.tail(reportData),0);
+            $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),0);
             $scope.$apply();
         },function(reject){});
     }
@@ -1030,9 +1026,10 @@ app.controller("TabController", [
             };
 
             $scope.goTo = function (route) {
+                console.log("go from :"  + $location.url());
                 $location.url(route + $routeParams.protocol + "/" + $routeParams.host +"/"+ $routeParams.query);
                 $scope.setActiveTab($location.url());
-                $scope.boardUrl = _.last($location.url().split("/"));
+                console.log("go to :"  +$location.url());
             };
 
             $scope.setActiveTab($location.url());

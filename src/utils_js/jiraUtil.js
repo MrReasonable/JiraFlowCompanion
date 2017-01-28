@@ -1,7 +1,7 @@
 function Url(location){
     var self = {};
     self.host = location.hostname||location.host;
-    self.path = location.pathname||location.path;
+    //self.path = location.pathname||location.path;
     self.protocol = location.protocol||location.protocol;
     self.port = location.port;
     self.query = location.query||parseUrlQueryString(location.search);
@@ -24,16 +24,16 @@ function Url(location){
 
 
 
-function CfdUrl(location){
+function JiraUrl(location){
     
-    let url  = new Url(location);   
+    let url  = (location)? new Url(location):{};   
 
-    url.buildUrl = function(){
-       return urlBuilder("rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json", url.buildCfdQueryString);
+    url.cfdApiUrl = function(){
+       return urlBuilder("/rest/greenhopper/1.0/rapid/charts/cumulativeflowdiagram.json", url.cfdQueryString);
     }
 
-    url.buildBoardConfigUrl = function(){
-        return urlBuilder("rest/greenhopper/1.0/rapidviewconfig/editmodel.json",
+    url.boardConfigApiUrl = function(){
+        return urlBuilder("/rest/greenhopper/1.0/rapidviewconfig/editmodel.json",
                           function(query){
                               return "?rapidViewId="+query.rapidView[0];
                           });
@@ -44,43 +44,39 @@ function CfdUrl(location){
         return url.host + port;
     }
     
-    url.buildRootUrl = function (){
+    url.rootUrl = function (){
         return url.protocol +"//"
                     + url.hostWithPort()
     }
 
-    url.buildJiraIssueUrl = (issueKey)=>{
-         return url.buildRootUrl()
+    url.issueUrl = (issueKey)=>{
+         return url.rootUrl()
                     + "/browse/"
                     + issueKey;
     }
 
     
-    url.findIssuesByIssuekeys = function(issues,index){
+    url.findIssuesByIssueKeys = function(issues,index){
         let query = jql.findIssuesInArray(issues,index);
-        return url.buildRootUrl()
+        return url.rootUrl()
                 +"/issues/?jql="
                 +encodeURIComponent(query);
     }
 
     function urlBuilder(path,queryBuilder){
-        var result = url.buildRootUrl() 
-                    + url.path.replace(
-                        "secure/RapidBoard.jspa"
-                        ,path
-                    ) 
+        var result = url.rootUrl() 
+                    + path
                     + queryBuilder(url.query);
-        console.log("Url Built:" + result);
         return result;
     }
     
-    url.buildCfdQueryString = (query)=>{
+    url.cfdQueryString = (query)=>{
         var result = "";
         if(query === undefined){
             query = url.query;
         }
         _.forEach(query, function(values,key){
-            if(key != "view" & key != "chart" ){
+            if(key != "view" & key != "chart" & key != "days"  ){
                 values.forEach(function(value){
                     result += key + "Id=" +value + "&" ;
                 });
@@ -90,20 +86,41 @@ function CfdUrl(location){
         return result;
     }
 
+
+    url.angularUrl = ()=>{
+        return jiraUrl.protocol +"/"
+        + jiraUrl.uriFriendlyHostWithPort() +"/"
+        + jiraUrl.angularQueryString()
+    };
+
+    url.angularQueryString = ()=>{
+        let result = "";
+        _.forEach(url.query,(value,key)=>{
+            if(value.toString!="" & ["view","chart","days"].indexOf(key)===-1){
+                 result += key + "=" + value.toString() +"&"
+            }
+        });
+        return result.slice(0, -1);
+    }
+
+    url.parseAngularQueryString = (queryString)=>{
+        let query ={};
+        let components = queryString.split("&");
+        components.forEach(component=>{
+            let parts = component.split("=");
+            query[_.first(parts)] = JSON.parse("["+_.last(parts)+"]");
+        })
+        url.query = query;
+        return query;
+    }
+
     url.getBoardId = function(){
         return url.query.rapidView
     }
 
-    url.getProtocol = ()=>{
-        return url.protocol//.replace(":","");
-    }
 
-    url.getUriFriendlyHostWithPort =()=>{
+    url.uriFriendlyHostWithPort =()=>{
         return encodeURIComponent(url.hostWithPort());
-    }
-
-    url.getHostWithProtocol = function(){
-        return  url.protocol +"//"+ url.host
     }
 
     return url;

@@ -1,43 +1,3 @@
-
-function CfdApiResponceParser(){
-    var self = {};
-
-    self.parse = function (json){
-        var boardData = new BoardData();
-        var changeTime;
-        var columnChange;
-        boardData.columns = parseColumns(json.columns);
-
-        for(changeTime in json.columnChanges){
-            _.forEach(json.columnChanges[changeTime], function(item){
-                columnChange = {};
-                columnChange.id = item.key;
-                columnChange.enter = changeTime ;
-                columnChange.column = boardData.columns[item.columnTo];
-
-                boardData.registerColumnChange(columnChange);
-            })
-
-        }
-
-
-        return boardData ;
-    }
-
-
-
-    function parseColumns(jiraColumns){
-        var columns = [];
-        _.forEach(jiraColumns, function(col){
-            columns.push(col.name);
-        });
-        return columns;
-    }
-
-
-    return self;
-}
-
 function BoardData(){
     var self ={};
 
@@ -56,7 +16,7 @@ function BoardData(){
                 columnChange = {};
                 columnChange.id = item.key;
                 columnChange.enter = changeTime ;
-                columnChange.column = boardData.columns[item.columnTo];
+                columnChange.column = self.columns[item.columnTo];
                 
                 self.registerColumnChange(columnChange);
             });
@@ -112,12 +72,12 @@ function BoardData(){
         self.quickFilters = quickFilterConfig.quickFilters.map(item => ({"id":item.id, "name":item.name}));
     }
 
-    self.registerCfdUrl = function(cfdUrl){
-        self.cfdUrl = cfdUrl;
+    self.registerjiraUrl = function(jiraUrl){
+        self.jiraUrl = jiraUrl;
     }
 
     self.getActiveQuickfilters = function(){
-        let filters = self.cfdUrl.query.quickFilter;
+        let filters = self.jiraUrl.query.quickFilter;
         let filterNames = [];
         if(!filters){
             return filterNames;
@@ -133,7 +93,7 @@ function BoardData(){
 
     self.getQuickfilters = ()=>{
         let quickFilters = _.cloneDeep(self.quickFilters);
-        let activeFilters = self.cfdUrl.query.quickFilter||[];
+        let activeFilters = self.jiraUrl.query.quickFilter||[];
         if(!quickFilters || !activeFilters){
             return {};
         }
@@ -154,7 +114,7 @@ function BoardData(){
                 activeFilters.push(""+filter.id);
             }
         });
-        self.cfdUrl.query.quickFilter = activeFilters;
+        self.jiraUrl.query.quickFilter = activeFilters;
     }
 
     
