@@ -277,25 +277,29 @@ app.component("spectralGraph",{
                     let chartData = [];
                     let spectralData = throughput.createContinousData(data);
                     let samples = self.samples||spectralData.length;
-                    chartData.push(throughput.generateDataStream("Done tickets"
-                                                                ,"bar"
-                                                                ,1
-                                                                ,spectralData
-                                                                ,[
-                                                                    throughput.increaseIndexByOne
-                                                                    ,throughput.transformToStream
-                                                                    ,_.curry(throughput.dropRight)(spectralData.length -samples)
-                                                                ]));
-                    chartData.push(throughput.generateDataStream("Percent"
-                                                                ,"line"
-                                                                ,2
-                                                                ,spectralData
-                                                                ,[
-                                                                    throughput.increaseIndexByOne
-                                                                    ,throughput.transformToAccSum
-                                                                    ,throughput.transformAccSumToAccPercentage
-                                                                    ,_.curry(throughput.dropRight)(spectralData.length -samples)
-                                                                ]));
+                    chartData.push(throughput.generateDataStream(
+                        "Done tickets"
+                        ,"bar"
+                        ,1
+                        ,spectralData
+                        ,[
+                            throughput.increaseIndexByOne
+                            ,throughput.addEmptyRowFirst
+                            ,throughput.transformToStream
+                            ,_.curry(throughput.dropRight)(spectralData.length -samples)
+                        ]));
+                    chartData.push(throughput.generateDataStream(
+                        "Percent"
+                        ,"line"
+                        ,2
+                        ,spectralData
+                        ,[
+                            throughput.increaseIndexByOne
+                            ,throughput.addEmptyRowFirst
+                            ,throughput.transformToAccSum
+                            ,throughput.transformAccSumToAccPercentage
+                            ,_.curry(throughput.dropRight)(spectralData.length -samples)
+                        ]));
                     
                     
                     return chartData;
@@ -369,22 +373,33 @@ app.component("throughputGraph",{
                     let chartData = [];
                     let throughputData = data;
                     
-                    chartData.push(throughput.generateDataStream("Done tickets"
-                                                                ,"bar"
-                                                                ,1
-                                                                ,throughputData
-                                                                ,[
-                                                                        throughput.increaseIndexByOne
-                                                                    ,throughput.transformToStream
-                                                                ]));
-                    chartData.push(throughput.generateDataStream("rolling Avg"
-                                                                ,"line"
-                                                                ,1
-                                                                ,throughputData
-                                                                ,[
-                                                                    throughput.rollingAverageTransformer( self.rollingAverage)
-                                                                   ,throughput.transformToStream
-                                                                ]));
+                    chartData.push(throughput.generateDataStream(
+                            "Done tickets"
+                            ,"bar"
+                            ,1
+                            ,throughputData
+                            ,[
+                                    throughput.increaseIndexByOne
+                                ,throughput.transformToStream
+                            ]));
+                    chartData.push(throughput.generateDataStream(
+                        "rolling Avg"
+                        ,"line"
+                        ,1
+                        ,throughputData
+                        ,[
+                            throughput.rollingAverageTransformer( self.rollingAverage)
+                            ,throughput.transformToStream
+                        ]));
+                     chartData.push(throughput.generateDataStream(
+                         "acc Avg"
+                        ,"line"
+                        ,1
+                        ,throughputData
+                        ,[
+                            throughput.rollingAverageTransformer( throughputData.length)
+                            ,throughput.transformToStream
+                        ]));
                     
                     self.sum =throughput.sum(data,1);
                     return chartData;
@@ -698,14 +713,23 @@ app.factory("throughputFactory", function () {
         return [pair[0]+1,pair[1]];
     });
 
+    factory.addEmptyRowFirst = (arr)=>{
+        let result = _.clone(arr);
+        result.unshift([0,0]);
+        return result;
+    }
+
     // Accu
-    var sum;
+    let sum;
     factory.transformToAccSum = mapWrapper(function(pair,index){
+        let result;
         if(index === 0){
-            sum = 0
+            sum = 0;
         }
         sum += pair[1];
-        return{x:parseInt(pair[0]),y:sum};
+        result = {x:parseInt(pair[0]),y:sum};
+       
+        return result;
     });
 
     factory.rollingAverageTransformer = function(over){
@@ -743,7 +767,6 @@ app.factory("throughputFactory", function () {
         return sum;
     };
 
-
     
     factory.averageLeadtime = data => {
         let total= 0;
@@ -780,7 +803,7 @@ app.factory("throughputFactory", function () {
         if(index === 0){
             sum = _.last(arr).y;
         }
-        return{x:value.x,y:Math.floor(value.y/sum*100)};
+        return{x:value.x,y:Math.floor(value.y/sum*1000)/10};
     });
 
      
@@ -816,7 +839,7 @@ app.controller("ThroughputController",
              
             $scope.reportData = boardData.getThroughputReport(filter);;
             $scope.sum = throughput.sum($scope.reportData,1);
-            $scope.average = Math.floor($scope.sum/$scope.reportData.length-2);
+            $scope.average = Math.floor($scope.sum/($scope.reportData.length-2));
             $scope.hasData = true;
             $scope.$apply();
             console.log($scope.dt)
@@ -827,15 +850,12 @@ app.controller("ThroughputController",
         updateReport();
     };
 
-
     $scope.sprintLengths = [
         {"value":1,"label":"1 week"},
         {"value":2,"label":"2 weeks"},
         {"value":3,"label":"3 weeks"},
         {"value":4,"label":"4 weeks"},
     ]
-
-    
 
     $scope.state.sprintLength = $scope.state.sprintLength || 0; 
     $scope.sprintLength = $scope.sprintLengths[$scope.state.sprintLength];
@@ -855,9 +875,6 @@ app.controller("ThroughputController",
 //******************************************************************************************
 // CFD
 //******************************************************************************************
-
-
-
 
 app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state) {
 

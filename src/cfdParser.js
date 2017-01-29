@@ -98,7 +98,7 @@ function BoardData(){
             return {};
         }
         quickFilters.forEach((filter)=>{
-            if(-1 != activeFilters.indexOf(""+filter.id)){
+            if(-1 != activeFilters.indexOf(filter.id)){
                 filter.selected = true;
             }else{
                 filter.selected = false;
