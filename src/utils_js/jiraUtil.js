@@ -40,7 +40,7 @@ function JiraUrl(location){
     }
 
     url.hostWithPort= ()=>{
-        var port = (url.port)?":"+url.port:url.port;
+        var port = (url.port)?":"+url.port:"";
         return url.host + port;
     }
     
@@ -88,9 +88,9 @@ function JiraUrl(location){
 
 
     url.angularUrl = ()=>{
-        return jiraUrl.protocol +"/"
-        + jiraUrl.uriFriendlyHostWithPort() +"/"
-        + jiraUrl.angularQueryString()
+        return url.protocol +"/"
+        + url.uriFriendlyHostWithPort() +"/"
+        + url.angularQueryString()
     };
 
     url.angularQueryString = ()=>{

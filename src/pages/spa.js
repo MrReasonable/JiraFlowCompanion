@@ -278,7 +278,7 @@ app.component("spectralGraph",{
                     let spectralData = throughput.createContinousData(data);
                     let samples = self.samples||spectralData.length;
                     chartData.push(throughput.generateDataStream(
-                        "Done tickets"
+                        "Tickets"
                         ,"bar"
                         ,1
                         ,spectralData
@@ -374,13 +374,12 @@ app.component("throughputGraph",{
                     let throughputData = data;
                     
                     chartData.push(throughput.generateDataStream(
-                            "Done tickets"
+                            self.data[0][1]
                             ,"bar"
                             ,1
                             ,throughputData
                             ,[
-                                    throughput.increaseIndexByOne
-                                ,throughput.transformToStream
+                                throughput.transformToStream
                             ]));
                     chartData.push(throughput.generateDataStream(
                         "rolling Avg"
@@ -515,7 +514,7 @@ app.factory("boardDataFactory",['$routeParams', function (routeParams) {
     }
 
     factory.fetchApiData = function(){
-       jiraUrl = parseRouteParams();
+       jiraUrl = jiraUrl||parseRouteParams();
        return new Promise((resolve,reject)=>{
             let configPromise =  sendRestRequest(jiraUrl.boardConfigApiUrl());
             let cfdDataPromise = sendRestRequest(jiraUrl.cfdApiUrl());
@@ -557,25 +556,51 @@ app.factory("sharedState",function(){
     var state = {
         "startTime": new Date().getTime()-365*timeUtil.MILLISECONDS_DAY,
     }
+
+    state.selectedOption = (options,selected)=>{
+        let result = null;
+        if(!selected){
+            return result;
+        }
+        let match = (option,selected) =>{
+           let same = true;
+            _.forEach(option,(value,key)=>{
+                if(key.indexOf("$$")=== -1){
+                    same = value === selected[key];
+                    return !same;
+                }
+            });
+          return same;  
+        }
+        _.forEach(options,option=>{
+            let found =match(option,selected);
+            result = option;
+            if(found){
+                return false;
+            }
+        }); 
+        return result;
+    }
     return state;
 });
 
 app.controller("SpectralController", 
                 [
                     '$scope', 
-                    '$route', 
-                    '$window', 
-                    '$routeParams', 
                     'boardDataFactory', 
                     'throughputFactory',
                     "sharedState"
-                   , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state) {
+                   , function ($scope, boardDataFactory, throughput,state) {
       console.log ("SpectralController");
      let sum;
+     $scope.state = state;
      $scope.data ;
      $scope.hasData = true;
      $scope.dt = new Date(state.startTime)||new Date();
-     $scope.samples;
+     $scope.state.samples = $scope.state.samples||0 ;
+     $scope.resolutions = throughput.resolutionOptions;
+    $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution)  || $scope.resolutions[1];
+     
 
     function updateReport(){
         
@@ -585,11 +610,14 @@ app.controller("SpectralController",
             $scope.boardData = boardData;
             let filter = {
                 "starttime": state.startTime,
-                "resolution": $scope.resolution.value*timeUtil.MILLISECONDS_DAY
+                "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
+                 "label":"Done Tickets"
             }
             $scope.columns = boardData.columns;
-            if($scope.startState){
-                filter.startState = $scope.startState;
+            $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution);
+            $scope.state.startState = $scope.state.selectedOption($scope.columns,$scope.state.startState);
+            if($scope.state.startState){
+                filter.startState = $scope.state.startState;
             }
             
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
@@ -601,33 +629,67 @@ app.controller("SpectralController",
         },function(reject){});
     }
 
+        $scope.startDateChanged = function () {
+
+            console.log("In:" + $scope.dt);
+            if(!new Date($scope.dt)){
+                return;
+            }
+            state.startTime = new Date($scope.dt).getTime();
+            updateReport();
+        };
+
+            $scope.updateResolution = function() {
+                updateReport();
+            };
+
+            updateReport();
+
+
+    }]);
     
-    $scope.startDateChanged = function () {
-
-        console.log("In:" + $scope.dt);
-        if(!new Date($scope.dt)){
-            return;
-        }
-        state.startTime = new Date($scope.dt).getTime();
-        updateReport();
-    };
 
 
-    $scope.resolutions = [
-        {value:1, label:"1 day"},
-        {value:7, label:"1 week"},
-        {value:14, label:"2 weeks"},
-        {value:21, label:"3 weeks"},
-        {value:30, label:"1 month"}
-    ]
+    app.controller("BacklogAgeController", 
+                [
+                    '$scope', 
+                    'boardDataFactory', 
+                    'throughputFactory',
+                    "sharedState"
+                   , function ($scope, boardDataFactory, throughput,state) {
+      console.log ("Backlog Age Controller");
+     let sum;
+     $scope.state = state;
+     $scope.data ;
+     $scope.hasData = true;
+     $scope.state.samples = $scope.state.samples||0 ;
+     $scope.resolutions =throughput.resolutionOptions;
 
-    $scope.resolution =  $scope.resolutions[state.resolution||0];
+     $scope.state.resolution =  state.selectedOption($scope.resolutions,$scope.state.resolution) || $scope.resolutions[1];
+
+    function updateReport(){
+        
+        boardDataFactory.getBoardData().then(function(boardData){
+            let spectralData;
+            $scope.boardData = boardData;
+            $scope.columns = boardData.columns;
+            $scope.state.resolution = $scope.state.resolution =  state.selectedOption($scope.resolutions,$scope.state.resolution);
+            
+            $scope.spectralData = boardData.getBacklogAgeReport({
+                "starttime":  new Date().getTime(),
+                "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
+                "label":"Tickets"
+           });
+            $scope.sum = throughput.sum($scope.spectralData,1);
+            $scope.average = throughput.averageLeadtime($scope.spectralData);
+            $scope.median = throughput.medianLeadtime($scope.spectralData);
+            $scope.hasData = true;
+            $scope.$apply();
+        },function(reject){});
+    }
     
     $scope.updateResolution = function() {
-        if($scope.resolution){
             updateReport();
-            state.resolution =_.indexOf($scope.resolutions,$scope.resolution);
-        } 
     };
 
     updateReport();
@@ -650,6 +712,14 @@ app.factory("throughputFactory", function () {
             "values" : _.drop(data)
         }];
     };
+
+    factory.resolutionOptions = [
+        {value:1, label:"1 day"},
+        {value:7, label:"1 week"},
+        {value:14, label:"2 weeks"},
+        {value:21, label:"3 weeks"},
+        {value:30, label:"1 month"}
+    ];
 
     factory.generateDataStream = function (key,type,yAxis, data, transform){
         let result = _.drop(_.clone(data));
@@ -814,16 +884,32 @@ app.factory("throughputFactory", function () {
 // ThroughputController ----------------------------------------------------------------------
 
 app.controller("ThroughputController", 
-                ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'throughputFactory','sharedState',"cfdFactory"
-                , function ($scope, $route, $window, $routeParams, boardDataFactory, throughput,state,cfd) {
+                ['$scope', 'boardDataFactory', 'throughputFactory','sharedState',"cfdFactory"
+                , function ($scope, boardDataFactory, throughput,state,cfd) {
       console.log ("ThroughputController");
+     $scope.title= "Throughput";
      $scope.data ;
-     $scope.rollingAverage = 3;
      $scope.hasData = false;
      $scope.state = state;
+     $scope.state.rollingAverage = $scope.state.rollingAverage || 5;
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.dlFormat = cfd.readableDatesOnCfdData;
 
+     $scope.sprintLengths = [
+        {"value":1,"label":"1 week"},
+        {"value":2,"label":"2 weeks"},
+        {"value":3,"label":"3 weeks"},
+        {"value":4,"label":"4 weeks"},
+     ]
+
+     $scope.reportTypes = [
+         {label:"Troughput",value:"getThroughputReport"},
+         {label:"Inflow",value:"getInflowReport"},
+         {label:"Backlog growth",value:"getBacklogGrowthReport"},
+         
+    ]
+
+    $scope.state.reportType = $scope.state.reportType || $scope.reportTypes[0]; 
     
     function updateReport(){
         
@@ -831,13 +917,17 @@ app.controller("ThroughputController",
             $scope.state.startTime = new Date($scope.dt).getTime();
             console.log($scope.dt)
             $scope.boardData = boardData;
-
+            setSprintLength();
             var filter = {
                 sampleTimes: cfdUtil.generateSampleTimes( 
-                    $scope.state.startTime,$scope.sprintLength.value)
+                    $scope.state.startTime, $scope.state.sprintLength.value),
+                label: $scope.state.reportType.label
             };
              
-            $scope.reportData = boardData.getThroughputReport(filter);;
+            //$scope.reportData = boardData.getBacklogGrowthReport(filter);
+            //$scope.reportData = boardData.getThroughputReport(filter);
+            $scope.reportData = boardData[$scope.state.reportType.value](filter)
+            $scope.title = $scope.state.reportType.label;
             $scope.sum = throughput.sum($scope.reportData,1);
             $scope.average = Math.floor($scope.sum/($scope.reportData.length-2));
             $scope.hasData = true;
@@ -850,21 +940,24 @@ app.controller("ThroughputController",
         updateReport();
     };
 
-    $scope.sprintLengths = [
-        {"value":1,"label":"1 week"},
-        {"value":2,"label":"2 weeks"},
-        {"value":3,"label":"3 weeks"},
-        {"value":4,"label":"4 weeks"},
-    ]
+    
 
-    $scope.state.sprintLength = $scope.state.sprintLength || 0; 
-    $scope.sprintLength = $scope.sprintLengths[$scope.state.sprintLength];
+    let setSprintLength = ()=>{
+        if($scope.state.sprintLength){
+            $scope.state.sprintLength = $scope.sprintLengths.find(sprintlength => {
+                return sprintlength.value===$scope.state.sprintLength.value;
+            });
+        }else{
+            $scope.state.sprintLength = $scope.sprintLengths[0];
+        }
+    }
+
+    
+   
+
     
     $scope.updateSprintLength = function() {
-        if($scope.sprintLength){
-            $scope.state.sprintLength = _.indexOf($scope.sprintLengths,$scope.sprintLength)
             updateReport();
-        } 
     };
 
     updateReport();
@@ -877,12 +970,12 @@ app.controller("ThroughputController",
 //******************************************************************************************
 
 app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state) {
-
+    $scope.state = state;
     $scope.cfdData = [{"key" : "No data" , "values" : [ [ 0 , 0]]}];
-    $scope.dt = new Date();
+    //$scope.state.cfdStartTime = $scope.state.cfdStartTime || new Date();
     $scope.hasData = false;
     $scope.startTime = 0;
-    $scope.zeroDone = false;
+    $scope.state.zeroDone = $scope.state.zeroDone || false;
     
     
     console.log("cfdController");
@@ -898,10 +991,9 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
             }
             $scope.hasData = true;
            
-            console.log($scope.dt);
+            console.log($scope.state.cfdStartTime);
             $scope.$apply();
         },50)
-        
         
     }
 
@@ -909,20 +1001,20 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     
     function getFilterParameters(){
         var parameters = {};
-        if(new Date($scope.dt).getTime() !== $scope.start){
-            parameters.startMilliseconds = new Date($scope.dt).getTime();
+        if(new Date($scope.state.cfdStartTime).getTime() !== $scope.start){
+            parameters.startMilliseconds = new Date($scope.state.cfdStartTime).getTime();
         }
         return parameters;
     }
 
     $scope.startDateChanged = function () {
-        console.log($scope.dt);
+        console.log($scope.state.cfdStartTime);
         updateCfd();
     };
 
     boardDataFactory.getBoardData().then(function (response) {
         $scope.boardData = response;
-        $scope.dt = new Date(parseInt(response.boardCreated));
+        $scope.state.cfdStartTime =  $scope.state.cfdStartTime ||new Date(parseInt(response.boardCreated));
         updateCfd();
     }, function (error) {
         console.log("send message failed");
@@ -938,26 +1030,27 @@ app.controller("SettingsController", [
     'boardDataFactory', 
     function ($scope,$location,$routeParams, boardDataFactory) {
     
+    function recieveBoardData (boardData){
+         $scope.boardData = boardData;
+         $scope.quickFilters = $scope.boardData.getQuickfilters();
+         $scope.$apply();
+    }
+
     function getBoardData(){
         
-        boardDataFactory.getBoardData().then(function(boardData){
-            $scope.boardData = boardData;
-            $scope.quickFilters = $scope.boardData.getQuickfilters();
-            $scope.$apply();
-        },function(reject){});
+        boardDataFactory.getBoardData().then(recieveBoardData,function(reject){});
     }
 
     $scope.apply = ()=>{
         console.log("Apply");
-        $scope.boardData.setActiveQuickFilters($scope.quickFilters);
-        boardDataFactory.updateApiData().then(function (response) {
-            getBoardData();
-        });
-        updateUrl("/settings/");
+       $scope.boardData.setActiveQuickFilters($scope.quickFilters);
+       updateUrl("/settings/");
+       boardDataFactory.fetchApiData().then(recieveBoardData);
+        
     };
 
-     updateUrl = function (route) {
-                $location.url(route + $scope.boardData.angularUrl());
+     let updateUrl = function (route) {
+                $location.url(route + $scope.boardData.jiraUrl.angularUrl());
                 console.log("New url :"  +$location.url());
             };
 
@@ -966,9 +1059,13 @@ app.controller("SettingsController", [
 }]);
 
 
-app.controller("IterationReportController",['$scope', 'boardDataFactory', function ($scope, boardDataFactory){
-    $scope.dt = new Date();
-    $scope.dt.setDate($scope.dt.getDate()-7);
+app.controller("IterationReportController",['$scope', 'boardDataFactory','sharedState', function ($scope, boardDataFactory,state){
+    $scope.state = state;
+    if(!$scope.state.iterationStart){
+        $scope.state.iterationStart = new Date();
+        $scope.state.iterationStart.setDate($scope.state.iterationStart.getDate()-7);
+    }
+    
     $scope.hasData = false;
     $scope.startTime = 0;
     $scope.url = "";
@@ -985,7 +1082,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory', functi
         {"value":4,"label":"4 weeks"},
     ]
 
-    $scope.sprintLength = $scope.sprintLengths[0];
+    $scope.state.sprintLength =$scope.state.sprintLength || $scope.sprintLengths[0];
     
     $scope.updateSprintLength = function() {
             updateReport();
@@ -998,19 +1095,29 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory', functi
     function updateReport(){
         
         boardDataFactory.getBoardData().then(function(boardData){
-            $scope.startTime = new Date($scope.dt).getTime();
+            $scope.startTime = new Date($scope.state.iterationStart).getTime();
             $scope.boardData = boardData;
             $scope.columns = boardData.columns;
-        
+            setStartState();
+            $scope.state.sprintLength = $scope.sprintLengths.find(sprintlength=> sprintlength.value === $scope.state.sprintLength.value);
+           
             $scope.url = $scope.boardData.jiraUrl.issueUrl("");        
             let reportData =  boardData.getIterationReport($scope.startTime
-                                                          ,$scope.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
-                                                          ,$scope.startState);
+                                                          ,$scope.state.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
+                                                          ,$scope.state.startState);
             $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
             $scope.hasData = true;
             $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),0);
             $scope.$apply();
         },function(reject){});
+    }
+
+    let setStartState = ()=>{
+        if($scope.state.startState){
+            $scope.state.startState = $scope.columns.find( col => {
+               return col.index === $scope.state.startState.index;
+            })
+        } 
     }
  
    
@@ -1028,9 +1135,9 @@ app.controller("TabController", [
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
             $scope.tabs.push({"caption": "Throughput", "active": false, "route": "/throughput/"});
             $scope.tabs.push({"caption": "Spectral analysis", "active": false, "route": "/spectral/"});
+            $scope.tabs.push({"caption": "Backlog Age", "active": false, "route": "/bl-age/"});
             $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
             $scope.tabs.push({"caption": "Settings", "active": false, "route": "/settings/"});
-
             
             $scope.setActiveTab = function (url) {
                 _.forEach($scope.tabs, function (tab) {
@@ -1071,6 +1178,9 @@ app.config(['$routeProvider',
             }).when('/spectral/'+jiraUrl, {
                 templateUrl: 'templates/spectral.html',
                 controller: 'SpectralController'
+            }).when('/bl-age/'+jiraUrl, {
+                templateUrl: 'templates/backlog-age.html',
+                controller: 'BacklogAgeController'
             }).when('/iteration-report/'+jiraUrl, {
                 templateUrl: 'templates/iterationReport.html',
                 controller: 'IterationReportController'
@@ -1080,5 +1190,4 @@ app.config(['$routeProvider',
             }).otherwise({
                 redirectTo: '/cfd/'+jiraUrl
             });
-    }
-]);
+    }]);

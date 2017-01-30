@@ -12,19 +12,19 @@
 
         <div class="col-md-4">
             <label>Iteration start date:</label>
-            <date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
+            <date-picker dt="state.iterationStart" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
         </div>
         <div class="col-md-4">
                 <div class="form-group">
       				<label>IterationLength(weeks):</label>
-      				<select class="form-control" ng-model="sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths" >
+      				<select class="form-control" ng-model="state.sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths" >
 					</select>
     		    </div>
         </div>
         <div class="col-md-4">   
             <div class="form-group">
       				<label>Start state:</label>
-      				<select class="form-control" ng-model="startState" ng-change="startStateChanged()" ng-options="item.name for item in columns" >
+      				<select class="form-control" ng-model="state.startState" ng-change="startStateChanged()" ng-options="item.name for item in columns" >
 				    </select>
 		    </div>
         </div>

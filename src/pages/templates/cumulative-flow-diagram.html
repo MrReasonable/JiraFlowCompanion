@@ -12,7 +12,7 @@
 
 	<div class="row">
 		<div class="col-lg-12">
-			<cfd-graph data="cfdDataTable" zero="zeroDone" ng-show="hasData"></cfd-graph>
+			<cfd-graph data="cfdDataTable" zero="state.zeroDone" ng-show="hasData"></cfd-graph>
 		</div>
 	</div>
   <div class="row">
@@ -35,7 +35,7 @@
         <div class="row">
 
             <div class="col-md-4">
-                <date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
+                <date-picker dt="state.cfdStartTime" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
             </div>
             <div class="col-md-2">
                     <download filename="CumulativeFlowData" format="dlFormat", data="cfdDataTable" ></download>
@@ -44,7 +44,7 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="checkbox">
-                    <label><input type="checkbox" ng-model="zeroDone" ng-change="startDateChanged()">Done starts from 0</label>
+                    <label><input type="checkbox" ng-model="state.zeroDone" ng-change="startDateChanged()">Done starts from 0</label>
                 </div>
             </div>
         </div>

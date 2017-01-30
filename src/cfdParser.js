@@ -111,7 +111,7 @@ function BoardData(){
         let activeFilters = [];
         quickFilters.forEach(filter=>{
             if(filter.selected){
-                activeFilters.push(""+filter.id);
+                activeFilters.push(filter.id);
             }
         });
         self.jiraUrl.query.quickFilter = activeFilters;
@@ -215,6 +215,28 @@ function BoardData(){
         return throughputReport.getData();
     };
 
+
+    self.getBacklogGrowthReport = function (filter){
+        let throughput = self.getThroughputReport(filter);
+        let inflow = self.getInflowReport(filter);
+        let head = throughput.shift();
+        inflow.shift();
+        throughput =  throughput.map((row,index)=>{
+            return [_.first(row),_.last(inflow[index])-_.last(row)];
+        });
+        throughput.unshift(head);
+        return throughput;
+
+    };
+
+    self.getInflowReport = function (filter){
+        let throughputReport =new ThroughputReport(filter);
+        _.forEach(self.tickets,function(ticket){
+            throughputReport.registerDoneTicket( ticket.enteredBoard());
+        });
+        return throughputReport.getData();
+    };
+
     self.getIterationReport = (startTime,duration,startState)=>{
         let iterationReport = new IterationReport(startTime,duration,_.last(self.columns),startState);
         _.forEach(self.tickets,iterationReport.registerTicket);
@@ -231,11 +253,30 @@ function BoardData(){
         let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
         let startState = filter.startState || _.first(self.columns);
         var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
+        
         _.forEach(self.tickets, function(ticket){
             if(ticket.getDoneTime(done) && ticket.getDoneTime(done)>starttime ){
+                console.log(ticket.id+",");
                 spectralAnalysisReport.registerLeadtime(ticket.getLeadtime(done,startState));
             }
         });
+        return spectralAnalysisReport.getData();
+    }
+
+    self.getBacklogAgeReport = function(filter){
+        let done = self.columns[self.columns.length-1];
+        filter = filter || {};
+        let starttime = filter.starttime || 0;
+        let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
+        var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
+        _.forEach(self.tickets, function(ticket){
+            if(!ticket.getDoneTime(done) || ticket.getDoneTime(done)>starttime ){
+                console.log(ticket.id+",");
+                spectralAnalysisReport.registerLeadtime(starttime-ticket.enteredBoard());
+            }
+        });
+        let data = spectralAnalysisReport.getData();
+        data[0][0] = filter.label 
         return spectralAnalysisReport.getData();
     }
 
@@ -339,7 +380,7 @@ function ThroughputReport(filter){
     function buildThroughputGrid(filter){
         let throughputGrid = gridOf(0,filter.sampleTimes.length+1,2);
         throughputGrid[0][0] = "Period";
-        throughputGrid[0][1] = "Throughput"; 
+        throughputGrid[0][1] = filter.label; 
         _.forEach(filter.sampleTimes,function (sampleTime,index){
             throughputGrid[index+1][0] = sampleTime;
         });
@@ -376,7 +417,7 @@ function SpectralAnalysisReport(resolution ){
 
     self.registerLeadtime = function(time){
         var index = Math.floor(time/self.resolution); 
-        if(!time){
+        if(time==null){
             return;
         }
         if(!spectralAnalysisData[index]){
