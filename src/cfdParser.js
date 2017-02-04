@@ -90,6 +90,19 @@ function BoardData(){
         })
         return filterNames;
     }
+    
+    self.getBacklogLength = (timestamp)=>{
+        let count = 0;
+        _.forEach(self.tickets,(ticket=>{
+            let done = parseInt(ticket.getDoneTime(_.last(self.columns)));
+            if( isNaN(done) || done>timestamp){
+                count++
+            }else{
+
+            }
+        }));
+        return count;
+    }
 
     self.getQuickfilters = ()=>{
         let quickFilters = _.cloneDeep(self.quickFilters);
@@ -243,6 +256,11 @@ function BoardData(){
         return iterationReport.getData();
     };
 
+    self.getTickets = (filter, map)=>{
+        let issues = _.filter(self.tickets,filter);
+        return issues.map(map);
+    };
+
     // filter {resolution:milliseconds,starttime:milliseconds}
     // resolution in milliseconds examples (day,week,month)
     // starttime in milliseconds Tickets done before starttime does not regiser 
@@ -306,11 +324,18 @@ function Ticket(id){
         return Object.keys(self.columnChanges);
     } 
 
+    self.isInColumn =()=>{
+        return self.columnChanges[_.last(columnChangeTimes())].column.name;
+    };
+    
     self.wasInColumn = function(timestamp){
         var column = "";
         _.forEach(self.columnChanges,function(columnChange){
-            if(columnChange.enter <= timestamp && columnChange.column){
-                
+            if(columnChange.enter <= timestamp /*&& columnChange.column*/){
+                if(!columnChange.column){
+                    return;
+                    //console.log("Change Missing Column: " + JSON.stringify(self));
+                }
                 column = columnChange.column.name;
             }else{
                 return false;
@@ -478,3 +503,4 @@ function IterationReport(startTime,duration,doneState,startState){
         return data;
     }
 }
+

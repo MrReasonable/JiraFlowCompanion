@@ -1,0 +1,62 @@
+<div class="container">
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="well">
+        <h4>Backlog age! (BETA)</h4>
+        <quickfilters board-data="boardData"></quickfilters>
+      </div>
+      
+      
+		</div>
+	</div>
+</div>
+<div class="container" style="width: 100%;">
+	
+	<div class="row">
+		<div class="col-lg-12">
+			
+			<spectral-graph data="spectralData" samples="state.samples" ng-show="hasData"></spectral-graph>
+		</div>
+	</div>
+</div>
+<div class="container" >
+  <div class="row">
+		 <div class="col-md-4">
+			  <label>Total item count:{{sum}}</label>
+		 </div>
+		 <div class="col-md-4">
+			  <label>Average Age:{{average}}</label>
+		 </div>
+		  <div class="col-md-4">
+			  <label>Median Age:{{median}}</label>
+		 </div>
+	</div>
+      
+    
+    <div class="row">
+      
+        		<div class="col-md-4">
+						<div class="form-group">
+      				<label>Resolution:</label>
+      				<select class="form-control" ng-model="state.resolution" ng-change="updateResolution()" ng-options="item.label for item in resolutions" >
+							</select>
+					 </div>
+				</div>
+				<div class="col-md-4">
+						<div class="form-group">
+      				<label>Zoom to :</label>
+      				<input class="form-control" type="number" ng-model="state.samples" ng-change="updateResolution()" >
+							</input>
+
+    		    </div>
+				</div>		
+    </div>
+		<div class="row">
+			<div class="col-md-4">
+          <download filename="BacklogAgeData" data="spectralData" ></download>
+      </div>
+			
+		</div>
+  </div>
+	</div>
+</div>
