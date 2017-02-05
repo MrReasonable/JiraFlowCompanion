@@ -274,7 +274,7 @@ function BoardData(){
         
         _.forEach(self.tickets, function(ticket){
             if(ticket.getDoneTime(done) && ticket.getDoneTime(done)>starttime ){
-                console.log(ticket.id+",");
+                //console.log(ticket.id+",");
                 spectralAnalysisReport.registerLeadtime(ticket.getLeadtime(done,startState));
             }
         });
@@ -289,7 +289,7 @@ function BoardData(){
         var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
         _.forEach(self.tickets, function(ticket){
             if(!ticket.getDoneTime(done) || ticket.getDoneTime(done)>starttime ){
-                console.log(ticket.id+",");
+                //console.log(ticket.id+",");
                 spectralAnalysisReport.registerLeadtime(starttime-ticket.enteredBoard());
             }
         });

@@ -261,88 +261,18 @@ app.component("spectralGraph",{
           data: '<',
           samples:'<?'
       },
-      controller: [ 'throughputFactory', function(throughput){
+      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
           var self = this;
           self.samples = self.samples || 0;
           self.chartData;
           self.sum = 0; 
           this.$onChanges = function (changes) {
                 if (changes.data) {
-                    self.chartData = transform(changes.data.currentValue);
+                    self.chartData = new SpectralGraphData(changes.data.currentValue).spectralAnalysisDataStream();
                 }
           }; 
           
-          function transform(data){
-                if(data){
-                    let chartData = [];
-                    let spectralData = throughput.createContinousData(data);
-                    let samples = self.samples||spectralData.length;
-                    chartData.push(throughput.generateDataStream(
-                        "Tickets"
-                        ,"bar"
-                        ,1
-                        ,spectralData
-                        ,[
-                            throughput.increaseIndexByOne
-                            ,throughput.addEmptyRowFirst
-                            ,throughput.transformToStream
-                            ,_.curry(throughput.dropRight)(spectralData.length -samples)
-                        ]));
-                    chartData.push(throughput.generateDataStream(
-                        "Percent"
-                        ,"line"
-                        ,2
-                        ,spectralData
-                        ,[
-                            throughput.increaseIndexByOne
-                            ,throughput.addEmptyRowFirst
-                            ,throughput.transformToAccSum
-                            ,throughput.transformAccSumToAccPercentage
-                            ,_.curry(throughput.dropRight)(spectralData.length -samples)
-                        ]));
-                    
-                    
-                    return chartData;
-                }
-                return ;
-                
-          }
-
-           self.options = {
-            
-            chart: {
-                type: 'multiChart',
-                height: 450,
-                margin : {
-                    top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
-                },
-                color: d3.scale.category10().range(),
-                useInteractiveGuideline: true,
-                duration: 500,
-                xAxis: {
-                    tickFormat: function(d){
-                        return d3.format(',f')(d);
-                    }
-                },
-                yAxis1: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                yAxis2: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-
-                
-                
-            }
-        };
-        
+           self.options = new NvD3ChartOptions().spectralGraph();
         
           self.config = {
               refreshDataOnly: false, // default: true
@@ -356,108 +286,18 @@ app.component("mcGraph",{
       bindings: {
           data: '<'
       },
-      controller: [ 'throughputFactory', function(throughput){
+      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
           var self = this;
           self.chartData;
           
           this.$onChanges = function (changes) {
                 if (changes.data) {
-                    self.chartData = transform(changes.data.currentValue);
+                    self.chartData = new MonteCarloGraphData(changes.data.currentValue).backlogDevelopmentStreams();
                 }
           }; 
           
-          function transform(data){
-                if(data){
-                    let chartData = [];
-                    let simulationCount = throughput.count(data.throughput);
-                    data.throughput.unshift([,]);
-                    data.inflow.unshift([,]);
-                    let throughputData = throughput.createContinousData(data.throughput);
-                    let inflowData = throughput.createContinousData(data.inflow);
-                    chartData.push(throughput.generateDataStream(
-                        "TP Likleyhood %"
-                        ,"area"
-                        ,1
-                        ,throughputData
-                        ,[
-                            throughput.toPercentage(simulationCount),
-                            throughput.transformToStream,
-                            
-                        ]));
-                    chartData.push(throughput.generateDataStream(
-                        "TP confidence %"
-                        ,"line"
-                        ,2
-                        ,throughputData
-                        ,[
-                            throughput.transformToAccSum
-                            ,throughput.transformAccSumToAccPercentage
-                            
-                        ]));
-                    if(inflowData.length != 2){
-                        chartData.push(throughput.generateDataStream(
-                        "Inflow likleyhood %"
-                        ,"bar"
-                        ,1
-                        ,inflowData
-                        ,[
-                            throughput.toPercentage(simulationCount),
-                            throughput.transformToStream
-                        ]));
-                    chartData.push(throughput.generateDataStream(
-                        "Inflow confidence"
-                        ,"line"
-                        ,2
-                        ,inflowData
-                        ,[
-                            throughput.transformToAccSum
-                            ,throughput.transformAccSumToAccPercentage
-                        ]));
-                    }
-                    
-                    
-                    
-                    return chartData;
-                }
-                return ;
-                
-          }
-
-           self.options = {
-            
-            chart: {
-                type: 'multiChart',
-                height: 450,
-                margin : {
-                    top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
-                },
-                color: d3.scale.category10().range(),
-                useInteractiveGuideline: true,
-                duration: 500,
-                xAxis: {
-                    tickFormat: function(d){
-                        return d3.format(',f')(d);
-                    }
-                },
-                yAxis1: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                yAxis2: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-
-                
-                
-            }
-        };
-        
+         
+           self.options = new NvD3ChartOptions().spectralGraph();
         
           self.config = {
               refreshDataOnly: false, // default: true
@@ -471,7 +311,7 @@ app.component("mcGraph",{
       bindings: {
           data: '<'
       },
-      controller: [ 'throughputFactory', function(throughput){
+      controller: [ 'nvD3TransformationsFactory', function(nvd3Trans){
           var self = this;
           self.chartData;
           
@@ -480,78 +320,12 @@ app.component("mcGraph",{
                     self.simulationCount = changes.simulationCount.currentValue;
                 }
                 if (changes.data) {
-                    self.chartData = transform(changes.data.currentValue);
+                    self.chartData = MonteCarloGraphData(changes.data.currentValue)
+                                        .remainingIterationsDataStreams();
                 }
           }; 
           
-          function transform(data){
-                if(data){
-                    let chartData = [];
-                    let simulationCount = throughput.count(data.remaining);
-                    data.remaining.forEach(item=>simulationCount+=item[1])
-                    
-                    data.remaining.unshift([,]);
-                    let remainingIterations = throughput.createContinousData(data.remaining);
-                    chartData.push(throughput.generateDataStream(
-                        "likelyhood %"
-                        ,"area"
-                        ,1
-                        ,remainingIterations
-                        ,[
-                            throughput.toPercentage(simulationCount),
-                            throughput.transformToStream
-                        ]));
-                    chartData.push(throughput.generateDataStream(
-                        "Confidence %"
-                        ,"line"
-                        ,2
-                        ,remainingIterations
-                        ,[
-                            throughput.transformToAccSum
-                            ,throughput.transformAccSumToAccPercentage
-                            
-                        ]));
-                    return chartData;
-                }
-                return ;
-                
-          }
-
-           self.options = {
-            
-            chart: {
-                type: 'multiChart',
-                height: 450,
-                margin : {
-                    top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
-                },
-                color: d3.scale.category10().range(),
-                useInteractiveGuideline: true,
-                duration: 500,
-                xAxis: {
-                    tickFormat: function(d){
-                        return d3.format(',f')(d);
-                    }
-                },
-                yAxis1: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-                yAxis2: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                },
-
-                
-                
-            }
-        };
-        
+          self.options = new NvD3ChartOptions().spectralGraph();
         
           self.config = {
               refreshDataOnly: false, // default: true
@@ -567,81 +341,17 @@ app.component("throughputGraph",{
           data: '<',
           rollingAverage: '<'
       },
-      controller: [ 'throughputFactory', function(throughput){
+      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
           var self = this;
 
           self.chartData;
           this.$onChanges = function (changes) {
                 if (changes.data) {
-                    self.chartData = transform(changes.data.currentValue);
+                    self.chartData = new ThroughputGraphData(changes.data.currentValue).throughputDataStreams(); 
                 }
           }; 
           
-          function transform(data){
-                if(data){
-                    let chartData = [];
-                    let throughputData = data;
-                    
-                    chartData.push(throughput.generateDataStream(
-                            self.data[0][1]
-                            ,"bar"
-                            ,1
-                            ,throughputData
-                            ,[
-                                throughput.transformToStream
-                            ]));
-                    chartData.push(throughput.generateDataStream(
-                        "rolling Avg"
-                        ,"line"
-                        ,1
-                        ,throughputData
-                        ,[
-                            throughput.rollingAverageTransformer( self.rollingAverage)
-                            ,throughput.transformToStream
-                        ]));
-                     chartData.push(throughput.generateDataStream(
-                         "acc Avg"
-                        ,"line"
-                        ,1
-                        ,throughputData
-                        ,[
-                            throughput.rollingAverageTransformer( throughputData.length)
-                            ,throughput.transformToStream
-                        ]));
-                    
-                    self.sum =throughput.sum(data,1);
-                    return chartData;
-                }
-                return ;
-                
-          }
-
-           self.options = {
-            
-            chart: {
-                type: 'multiChart',
-                height: 450,
-                margin : {
-                    top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
-                },
-                color: d3.scale.category10().range(),
-                useInteractiveGuideline: true,
-                duration: 500,
-                xAxis: {
-                    tickFormat: function(d) {
-                        return d3.time.format('%Y-%m-%d')(new Date(d));
-                    }
-                },
-                yAxis1: {
-                    tickFormat: function(d){
-                        return d3.format(',.0f')(d);
-                    }
-                }
-            }
-        };
+           self.options = new NvD3ChartOptions().historicalBarChart(); 
         
         
           self.config = {
@@ -655,20 +365,6 @@ app.component("throughputGraph",{
 
 app.factory("cfdFactory", function () {
     var factory = {};
-
-
-    factory.filterCfdChartData = function (cfdRawChartData, start) {
-        var filteredCfdData = [];
-        _.forEach(cfdRawChartData, function (laneData) {
-            var filteredLane = {};
-            filteredLane.key = laneData.key;
-            filteredLane.values = filterArray(laneData.values, function (value) {
-                return value[0] >= start;
-            });
-            filteredCfdData.push(filteredLane);
-        });
-        return filteredCfdData;
-    };
 
     factory.buildCfdChartData = function (cfdData) {
         var chartData = [];
@@ -761,10 +457,29 @@ app.factory("boardDataFactory",['$routeParams', function (routeParams) {
     return factory;
 }]);
 
+app.factory("nvD3TransformationsFactory", function () {
+    return new NvD3Trans();
+});
+
 app.factory("sharedState",function(){
     var state = {
         "startTime": new Date().getTime()-365*timeUtil.MILLISECONDS_DAY,
     }
+
+    state.resolutionOptions = [
+        {value:1, label:"1 day"},
+        {value:7, label:"1 week"},
+        {value:14, label:"2 weeks"},
+        {value:21, label:"3 weeks"},
+        {value:30, label:"1 month"}
+    ];
+
+    state.iterationLengths = [
+        {"value":1,"label":"1 week"},
+        {"value":2,"label":"2 weeks"},
+        {"value":3,"label":"3 weeks"},
+        {"value":4,"label":"4 weeks"},
+     ];
 
     state.selectedOption = (options,selected)=>{
         let result = null;
@@ -797,9 +512,9 @@ app.controller("SpectralController",
                 [
                     '$scope', 
                     'boardDataFactory', 
-                    'throughputFactory',
+                    'nvD3TransformationsFactory',
                     "sharedState"
-                   , function ($scope, boardDataFactory, throughput,state) {
+                   , function ($scope, boardDataFactory, nvD3Trans,state) {
       console.log ("SpectralController");
      let sum;
      $scope.state = state;
@@ -807,7 +522,7 @@ app.controller("SpectralController",
      $scope.hasData = true;
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.state.samples = $scope.state.samples||0 ;
-     $scope.resolutions = throughput.resolutionOptions;
+     $scope.resolutions = state.resolutionOptions;
     $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution)  || $scope.resolutions[1];
      
 
@@ -830,9 +545,9 @@ app.controller("SpectralController",
             }
             
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
-            $scope.sum = throughput.sum($scope.spectralData,1);
-            $scope.average = throughput.averageLeadtime($scope.spectralData);
-            $scope.median = throughput.medianLeadtime($scope.spectralData);
+            $scope.sum = nvD3Trans.sum($scope.spectralData,1);
+            $scope.average = nvD3Trans.averageLeadtime($scope.spectralData);
+            $scope.median = nvD3Trans.medianLeadtime($scope.spectralData);
             $scope.hasData = true;
             $scope.$apply();
         },function(reject){});
@@ -863,7 +578,7 @@ app.controller("SpectralController",
                 [
                     '$scope', 
                     'boardDataFactory', 
-                    'throughputFactory',
+                    'nvD3TransformationsFactory',
                     "sharedState"
                    , function ($scope, boardDataFactory, throughput,state) {
       console.log ("Backlog Age Controller");
@@ -872,7 +587,7 @@ app.controller("SpectralController",
      $scope.data ;
      $scope.hasData = true;
      $scope.state.samples = $scope.state.samples||0 ;
-     $scope.resolutions =throughput.resolutionOptions;
+     $scope.resolutions = state.resolutionOptions;
 
      $scope.state.resolution =  state.selectedOption($scope.resolutions,$scope.state.resolution) || $scope.resolutions[1];
 
@@ -912,215 +627,14 @@ app.controller("SpectralController",
 // Throughput
 //******************************************************************************************
 
-app.factory("throughputFactory", function () {
-    var factory= {};
-    factory.generateChartData = function (data){
-        return [{
-            "key" : "Troughput" ,
-            "bar": true,
-            "values" : _.drop(data)
-        }];
-    };
 
-    factory.resolutionOptions = [
-        {value:1, label:"1 day"},
-        {value:7, label:"1 week"},
-        {value:14, label:"2 weeks"},
-        {value:21, label:"3 weeks"},
-        {value:30, label:"1 month"}
-    ];
-
-    factory.iterationLengths = [
-        {"value":1,"label":"1 week"},
-        {"value":2,"label":"2 weeks"},
-        {"value":3,"label":"3 weeks"},
-        {"value":4,"label":"4 weeks"},
-     ];
-
-     factory.count = (data)=>{
-         let count = 0;
-         data.forEach(item=>{
-             if(!isNaN(item[1])){
-                 count+=item[1];
-             }
-         });
-         return count;
-     }
-
-     factory.toPercentage = (total)=>{
-         return factory.mapWrapper(item => {
-                               return [item[0],Math.floor(1000*item[1]/total)/10]
-                            })
-     }
-
-     
-     
-
-    factory.generateDataStream = function (key,type,yAxis, data, transform){
-        let result = _.drop(_.clone(data));
-        if(!_.isArray(transform)){
-            transform = [transform];
-        }
-
-        //console.log("original data =" + JSON.stringify(result));
-        
-        transform.forEach( function(trans){
-            result = trans(result);
-        });
-
-        //console.log("transformed data =" + JSON.stringify(result));
-
-        return {
-            "key" : key ,
-            "type": type,
-            "yAxis":yAxis,
-            "values" :result
-        };
-    };
-
-    factory.dropRight = function(n,array){
-        return _.dropRight(array,n);
-    }
-    
-    factory.createContinousData = function(data){
-        let header = data.shift();
-        let max = _.last(data)[0];
-        let grid = gridOf(0,max,2);
-
-        grid = grid.map(function(item,index){
-            return [index,0];
-        });
-
-        data.forEach(function(item){
-            grid[item[0]]=item;
-        });
-        grid.unshift(header);
-        return grid;
-    }
-
-    //utility function to return a function(array) that will apply return arr.map(mapFunction) 
-    factory.mapWrapper = (mapFunction)=>{
-        return (arr)=>{
-            return arr.map(mapFunction);
-        }
-    }
-
-    // pair [1,2] -> {x:1,y:2}
-    //usage array.map()
-    factory.transformToStream = factory.mapWrapper(function(pair){
-        return{x:parseInt(pair[0]),y:pair[1]};
-    });
-    
-    
-    //make index 1 based [[0,22],[1,8]] -> [[1,22],[2,8]]
-    // usage array.map(increaseIndexByOne); 
-    factory.increaseIndexByOne = factory.mapWrapper(function(pair){
-        return [pair[0]+1,pair[1]];
-    });
-
-    factory.addEmptyRowFirst = (arr)=>{
-        let result = _.clone(arr);
-        result.unshift([0,0]);
-        return result;
-    }
-
-    // Accu
-    let sum;
-    factory.transformToAccSum = factory.mapWrapper(function(pair,index){
-        let result;
-        if(index === 0){
-            sum = 0;
-        }
-        sum += pair[1];
-        result = {x:parseInt(pair[0]),y:sum};
-       
-        return result;
-    });
-
-    factory.rollingAverageTransformer = function(over){
-        
-        return factory.mapWrapper(function(value,index,arr){
-            let sum = 0;
-            let samples = 0;
-            let avg; 
-            for(let i=index-(over-1);i<=index;i++){
-                if(i>=0){
-                    sum += _.last(arr[i]);
-                    samples++;
-                }
-            }
-            avg = Math.floor(100*sum/samples)/100;
-            //console.log("sum/samples=avg =" + sum +"/"+ samples +"=" + avg);
-            return [_.first(value),avg];
-        });
-    };
-
-    
-
-    // data = [[1,2],[3,4]]
-    // sum = facory.sum(data,1);
-    // sum = 6
-
-    factory.sum = (data,column)=>{
-        column = column || 1;
-        let sum = 0;
-        data.forEach(row =>{
-            if(!isNaN(row[column])){
-                sum +=  row[column];
-            }
-        });
-        return sum;
-    };
-
-    
-    factory.averageLeadtime = data => {
-        let total= 0;
-        const oneBased = 1;
-        const iLeadtime = 0;
-        const iDoneTockets = 1 
-        data.forEach(row =>{
-            if(!isNaN(row[iLeadtime]) && !isNaN(row[iDoneTockets])){
-               total +=  (oneBased+row[iLeadtime])*row[iDoneTockets];
-            }
-           
-        });
-        return Math.ceil(total/factory.sum(data,1));
-    };
-
-   
-    factory.medianLeadtime = data => {
-        let halfThroghput= factory.sum(data,1)/2;
-        let sum = 0;
-        let median = 0;
-        _.forEach(data,row =>{
-            if(!isNaN(row[1])){
-                sum +=  row[1];
-            }
-            if(sum >= halfThroghput){
-                   median = 1+ row[0];
-                   return false; 
-            }
-        });
-        return median;
-    };
-    
-    factory.transformAccSumToAccPercentage = factory.mapWrapper(function(value,index,arr){
-        if(index === 0){
-            sum = _.last(arr).y;
-        }
-        return{x:value.x,y:Math.floor(value.y/sum*1000)/10};
-    });
-
-     
-    return factory;
-});
 
 
 // ThroughputController ----------------------------------------------------------------------
 
 app.controller("ThroughputController", 
-                ['$scope', 'boardDataFactory', 'throughputFactory','sharedState',"cfdFactory"
-                , function ($scope, boardDataFactory, throughput,state,cfd) {
+                ['$scope', 'boardDataFactory', 'nvD3TransformationsFactory','sharedState',"cfdFactory"
+                , function ($scope, boardDataFactory, nvD3Trans,state,cfd) {
       console.log ("ThroughputController");
      $scope.title= "Throughput";
      $scope.data ;
@@ -1130,7 +644,7 @@ app.controller("ThroughputController",
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.dlFormat = cfd.readableDatesOnCfdData;
 
-     $scope.sprintLengths = throughput.iterationLengths;
+     $scope.sprintLengths = state.iterationLengths;
 
      $scope.reportTypes = [
          {label:"Troughput",value:"getThroughputReport"},
@@ -1157,7 +671,7 @@ app.controller("ThroughputController",
             
             $scope.reportData = boardData[$scope.state.reportType.value](filter)
             $scope.title = $scope.state.reportType.label;
-            $scope.sum = throughput.sum($scope.reportData,1);
+            $scope.sum = nvD3Trans.sum($scope.reportData,1);
             $scope.average = Math.floor($scope.sum/($scope.reportData.length-2));
             $scope.hasData = true;
             $scope.$apply();
@@ -1278,7 +792,8 @@ app.controller("SettingsController", [
 }]);
 
 
-app.controller("IterationReportController",['$scope', 'boardDataFactory','sharedState', 'throughputFactory', function ($scope, boardDataFactory,state, throughput){
+app.controller("IterationReportController",['$scope', 'boardDataFactory','sharedState',  
+                function ($scope, boardDataFactory,state){
     $scope.state = state;
     if(!$scope.state.iterationStart){
         $scope.state.iterationStart = new Date();
@@ -1294,7 +809,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
     };
 
 
-    $scope.sprintLengths = throughput.iterationLengths;
+    $scope.sprintLengths = state.iterationLengths;
 
     $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength) || $scope.sprintLengths[0];
     
@@ -1349,8 +864,8 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
 }]);
 
 app.controller("MontecarloController", 
-                ['$scope', 'boardDataFactory', 'throughputFactory','sharedState',"cfdFactory"
-                , function ($scope, boardDataFactory, throughput,state,cfd) {
+                ['$scope', 'boardDataFactory','sharedState',"cfdFactory"
+                , function ($scope, boardDataFactory, state,cfd) {
       console.log ("MontecarloController");
      $scope.title= "Monte carlo simulation";
      $scope.data ;
@@ -1362,85 +877,9 @@ app.controller("MontecarloController",
      $scope.state.maxRemaining = $scope.state.maxRemaining|| 100;
      $scope.state.showRemaining = $scope.state.showRemaining || false;
      $scope.state.stableScope = $scope.state.stableScope || true;
-     $scope.sprintLengths = throughput.iterationLengths;
+     $scope.sprintLengths = state.iterationLengths;
 
-     function Montecarlo(params){
-    self = this;
-    let maxRemaining = params.maxRemaining||100;
-    self.simulate = ()=>{
-        let result = [];
-        
-        for(let i=0;i<params.simulations;i++){
-            let simulation = {};
-            simulation.remaining = maxRemaining
-            simulation.throughput = generateSample(params.passedThroughputData);
-            simulation.inflow = generateSample(params.passedInflowData);
-            if(simulation.throughput && (simulation.throughput > simulation.inflow)){
-                simulation.remaining = limitRemaining(Math.ceil(params.backlogLength/(simulation.throughput-simulation.inflow)));
-            }
-            result.push(simulation);
-        }
-        return result;
-    }
-
-    let limitRemaining =(value)=>{
-        return (maxRemaining>=value)?value:maxRemaining;
-    }
-
-    let generateSample = (arr)=>{
-        const len = arr.length;
-        result = 0;
-        for(let i=0;i<len;i++){
-            result += arr[Math.floor(len*Math.random())];
-        }
-        return result/len;
-
-    }
-    return self;
-}
-
-    function toValueArray(arr){
-       let result = arr.map(item=>item[1]);
-       result.shift();
-       return result; 
-    } 
-
-    function toKeyValueArray(obj){
-        let data = [];
-        _.forEach(obj,function(item,index){
-            data.push([parseInt(index),item]);
-        })
-        data.sort(function(a,b){
-            return a[0]-b[0];
-        })
-        return data;
-    }
-
-    function aggregate(arr,transformer){
-        result = {}
-        arr.forEach(item=>{
-            let transformed = transformer(item);
-            if (!result[transformed]){
-                result[transformed] = 0;
-            };
-            result[transformed]++;
-        });
-        console.log (JSON.stringify(result));
-        return toKeyValueArray(result);
-    }
-
-    function aggregateMcDistributions(data){
-        let distributions ={
-            throughput : aggregate(data,(item)=>Math.floor(item.throughput)),
-            inflow : aggregate(data,(item)=>Math.ceil(item.inflow)),
-            remaining : aggregate(data,item=>item.remaining)
-        }
-
-        return distributions;
-    }
-    
-    function updateReport(){
-        
+    function updateReport(){        
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
             $scope.boardData = boardData;
             //setSprintLength();
@@ -1461,8 +900,8 @@ app.controller("MontecarloController",
             }
             //console.log (JSON.stringify( mc));
             
-            $scope.data = new Montecarlo($scope.mc).simulate();
-            $scope.distributions =  aggregateMcDistributions($scope.data);
+            $scope.data = new MonteCarloSimulator($scope.mc).simulate();
+            $scope.distributions =  $scope.data.aggregatedAsDistributions();
             console.log ( JSON.stringify($scope.distributions));
             
             $scope.hasData = true;
@@ -1485,17 +924,21 @@ app.controller("MontecarloController",
         updateReport();
     };
 
-     let setSprintLength = ()=>{
-        $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)||$scope.sprintLengths[0];
-    }
     
-    
-   
 
-    
     $scope.updateSprintLength = function() {
             updateReport();
     };
+
+    function toValueArray(arr){
+       let result = arr.map(item=>item[1]);
+       result.shift();
+       return result; 
+    } 
+
+    let setSprintLength = ()=>{
+        $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)||$scope.sprintLengths[0];
+    }
 
     setSprintLength();
     updateReport();
@@ -1516,7 +959,7 @@ app.controller("TabController", [
             $scope.tabs.push({"caption": "Spectral analysis", "active": false, "route": "/spectral/"});
             $scope.tabs.push({"caption": "Backlog Age", "active": false, "route": "/bl-age/"});
             $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
-            $scope.tabs.push({"caption": "Montecarlo", "active": false, "route": "/montecarlo/"});
+            $scope.tabs.push({"caption": "Monte Carlo", "active": false, "route": "/montecarlo/"});
             
             $scope.tabs.push({"caption": "Settings", "active": false, "route": "/settings/"});
             
