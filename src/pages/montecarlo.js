@@ -6,7 +6,7 @@
      //           maxRemaining:limit the maximum iterations remaining for the simulation default = 100;
      //       }
      function MonteCarloSimulator(params){
-        self = this;
+        const self = this;
         let maxRemaining = params.maxRemaining||100;
         self.simulate = ()=>{
             let result = [];
@@ -17,7 +17,7 @@
                 simulation.throughput = generateSample(params.passedThroughputData);
                 simulation.inflow = generateSample(params.passedInflowData);
                 if(simulation.throughput && (simulation.throughput > simulation.inflow)){
-                    simulation.remaining = limitRemaining(Math.ceil(params.backlogLength/(simulation.throughput-simulation.inflow)));
+                    simulation.remaining = limitRemaining(Math.ceil(params.backlogLength/((simulation.throughput*params.focus/100)-simulation.inflow)));
                 }
                 result.push(simulation);
             }
@@ -142,7 +142,8 @@
                         ,throughputData
                         ,[
                             transformer.toPercentage(simulationCount),
-                            transformer.transformToStream,
+                            transformer.transformToStream
+                           
                             
                         ]));
                     chartData.push(transformer.generateDataStream(
@@ -151,8 +152,9 @@
                         ,2
                         ,throughputData
                         ,[
-                            transformer.transformToAccSum
-                            ,transformer.transformAccSumToAccPercentage
+                            transformer.transformToAccSum,
+                            transformer.transformAccSumToAccPercentage
+                            ,transformer.inversePercentage
                             
                         ]));
                     if(inflowData.length != 2){
@@ -173,6 +175,7 @@
                         ,[
                             transformer.transformToAccSum
                             ,transformer.transformAccSumToAccPercentage
+                            ,transformer.inversePercentage
                         ]));
                     }
                     

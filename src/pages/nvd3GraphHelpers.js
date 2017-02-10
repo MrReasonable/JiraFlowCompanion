@@ -120,6 +120,12 @@ function NvD3Trans() {
         return result;
     });
 
+    self.inversePercentage= self.mapWrapper(item=>{
+        return {x:item.x,y:Math.floor(10*(100-item.y))/10};
+    });
+
+    
+
     self.rollingAverageTransformer = function(over){
         
         return self.mapWrapper(function(value,index,arr){
@@ -211,7 +217,7 @@ function NvD3ChartOptions(){
                     top: 30,
                     right: 60,
                     bottom: 50,
-                    left: 70
+                    left: 100
                 },
                 color: d3.scale.category10().range(),
                 useInteractiveGuideline: true,
@@ -222,6 +228,7 @@ function NvD3ChartOptions(){
                     }
                 },
                 yAxis1: {
+                    axisLabel:"Tickets",
                     tickFormat: function(d){
                         return d3.format(',.0f')(d);
                     }
@@ -237,24 +244,27 @@ function NvD3ChartOptions(){
                 height: 450,
                 margin : {
                     top: 30,
-                    right: 60,
-                    bottom: 50,
-                    left: 70
+                    right: 100,
+                    bottom: 100,
+                    left: 100
                 },
                 color: d3.scale.category10().range(),
                 useInteractiveGuideline: true,
                 duration: 500,
                 xAxis: {
+                    axisLabel:"Lead time",
                     tickFormat: function(d){
                         return d3.format(',f')(d);
                     }
                 },
                 yAxis1: {
+                    axisLabel:"Tickets",
                     tickFormat: function(d){
                         return d3.format(',.0f')(d);
                     }
                 },
                 yAxis2: {
+                    axisLabel:"Acc %",
                     tickFormat: function(d){
                         return d3.format(',.0f')(d);
                     }

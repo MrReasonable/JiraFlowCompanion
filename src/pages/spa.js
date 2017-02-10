@@ -97,8 +97,8 @@ app.component("quickFilters",{
 
 app.component ("datePicker",{
     template: ` <p class="input-group">
-                    <input type="text" class="form-control" datepicker-popup="yyyy-MM-dd" ng-model="$ctrl.dt"  
-                    ng-change="$ctrl.dateChanged()" is-open="$ctrl.opened" min-date="$ctrl.start" 
+                    <input type="text" class="form-control" uib-datepicker-popup="yyyy-MM-dd" ng-model="$ctrl.dt"  
+                    ng-change="$ctrl.dateChanged()" ng-model-options='{ debounce: 1000 }' is-open="$ctrl.opened" min-date="$ctrl.start" 
                     max-date="$ctrl.today" ng-required="true" close-text="Close" />
                     <span class="input-group-btn">
                         <button type="button" class="btn btn-default" ng-click="$ctrl.open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
@@ -259,20 +259,24 @@ app.component("spectralGraph",{
       template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
       bindings: {
           data: '<',
-          samples:'<?'
+          samples:'<?',
+          label: '@'
       },
       controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
           var self = this;
           self.samples = self.samples || 0;
-          self.chartData;
-          self.sum = 0; 
+          self.chartData={};
           this.$onChanges = function (changes) {
                 if (changes.data) {
-                    self.chartData = new SpectralGraphData(changes.data.currentValue).spectralAnalysisDataStream();
+                    self.chartData = new SpectralGraphData(changes.data.currentValue).spectralAnalysisDataStream(self.samples);
+                }
+                if(changes.label){
+                    self.options.chart.xAxis.axisLabel = changes.label.currentValue;
                 }
           }; 
           
            self.options = new NvD3ChartOptions().spectralGraph();
+          
         
           self.config = {
               refreshDataOnly: false, // default: true
@@ -287,7 +291,7 @@ app.component("mcGraph",{
           data: '<'
       },
       controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
-          var self = this;
+          const self = this;
           self.chartData;
           
           this.$onChanges = function (changes) {
@@ -298,6 +302,9 @@ app.component("mcGraph",{
           
          
            self.options = new NvD3ChartOptions().spectralGraph();
+           self.options.chart.yAxis1.axisLabel = "Likelyhood %";
+           self.options.chart.yAxis2.axisLabel = "Confidence %";
+           self.options.chart.xAxis.axisLabel = "Throughput, In flow / iteration ";
         
           self.config = {
               refreshDataOnly: false, // default: true
@@ -312,10 +319,10 @@ app.component("mcGraph",{
           data: '<'
       },
       controller: [ 'nvD3TransformationsFactory', function(nvd3Trans){
-          var self = this;
+          const self = this;
           self.chartData;
           
-          this.$onChanges = function (changes) {
+          self.$onChanges = function (changes) {
                 if (changes.simulationCount){
                     self.simulationCount = changes.simulationCount.currentValue;
                 }
@@ -326,7 +333,10 @@ app.component("mcGraph",{
           }; 
           
           self.options = new NvD3ChartOptions().spectralGraph();
-        
+          self.options.chart.yAxis1.axisLabel = "Likelyhood %";
+          self.options.chart.yAxis2.axisLabel = "Confidence %";
+          self.options.chart.xAxis.axisLabel = "Iterations until done";
+
           self.config = {
               refreshDataOnly: false, // default: true
           };
@@ -347,7 +357,7 @@ app.component("throughputGraph",{
           self.chartData;
           this.$onChanges = function (changes) {
                 if (changes.data) {
-                    self.chartData = new ThroughputGraphData(changes.data.currentValue).throughputDataStreams(); 
+                    self.chartData = new ThroughputGraphData(changes.data.currentValue,self.rollingAverage).throughputDataStreams(); 
                 }
           }; 
           
@@ -519,7 +529,8 @@ app.controller("SpectralController",
      let sum;
      $scope.state = state;
      $scope.data ;
-     $scope.hasData = true;
+     $scope.loading = true;
+     
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.state.samples = $scope.state.samples||0 ;
      $scope.resolutions = state.resolutionOptions;
@@ -548,9 +559,12 @@ app.controller("SpectralController",
             $scope.sum = nvD3Trans.sum($scope.spectralData,1);
             $scope.average = nvD3Trans.averageLeadtime($scope.spectralData);
             $scope.median = nvD3Trans.medianLeadtime($scope.spectralData);
-            $scope.hasData = true;
+            $scope.loading = false;
             $scope.$apply();
-        },function(reject){});
+        },function(reject){
+            $scope.loading = false;
+            console.error ("failed to update report",reject);
+        });
     }
 
         $scope.startDateChanged = function () {
@@ -584,6 +598,7 @@ app.controller("SpectralController",
       console.log ("Backlog Age Controller");
      let sum;
      $scope.state = state;
+     $scope.loading = true;
      $scope.data ;
      $scope.hasData = true;
      $scope.state.samples = $scope.state.samples||0 ;
@@ -608,8 +623,12 @@ app.controller("SpectralController",
             $scope.average = throughput.averageLeadtime($scope.spectralData);
             $scope.median = throughput.medianLeadtime($scope.spectralData);
             $scope.hasData = true;
+            $scope.loading = false;
             $scope.$apply();
-        },function(reject){});
+        },function(reject){
+            $scope.loading = false;
+            console.error ("failed to update report",reject);
+        });
     }
     
     $scope.updateResolution = function() {
@@ -637,13 +656,12 @@ app.controller("ThroughputController",
                 , function ($scope, boardDataFactory, nvD3Trans,state,cfd) {
       console.log ("ThroughputController");
      $scope.title= "Throughput";
-     $scope.data ;
      $scope.hasData = false;
      $scope.state = state;
      $scope.state.rollingAverage = $scope.state.rollingAverage || 5;
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.dlFormat = cfd.readableDatesOnCfdData;
-
+     $scope.loading = true;
      $scope.sprintLengths = state.iterationLengths;
 
      $scope.reportTypes = [
@@ -656,7 +674,7 @@ app.controller("ThroughputController",
     $scope.state.reportType = $scope.state.selectedOption($scope.reportTypes,$scope.state.reportType) || $scope.reportTypes[0]; 
     
     function updateReport(){
-        
+        $scope.loading = true;
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
             $scope.state.startTime = new Date($scope.dt).getTime();
             console.log($scope.dt)
@@ -674,9 +692,13 @@ app.controller("ThroughputController",
             $scope.sum = nvD3Trans.sum($scope.reportData,1);
             $scope.average = Math.floor($scope.sum/($scope.reportData.length-2));
             $scope.hasData = true;
+            $scope.loading = false;
             $scope.$apply();
             console.log($scope.dt)
-        },function(reject){});
+        },function(reject){
+            $scope.loading = false;
+            console.error ("failed to update report",reject);
+        });
     }
 
     $scope.startDateChanged = function () {
@@ -708,14 +730,15 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     //$scope.state.cfdStartTime = $scope.state.cfdStartTime || new Date();
     $scope.hasData = false;
     $scope.startTime = 0;
+    $scope.loading = true;
     $scope.state.zeroDone = $scope.state.zeroDone || false;
     
     
     console.log("cfdController");
-
     $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     function updateCfd() {
+         $scope.loading = true;
         setTimeout(()=>{
             var filter = getFilterParameters();
             $scope.cfdDataTable = $scope.boardData.getCfdData(filter);
@@ -725,6 +748,7 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
             $scope.hasData = true;
            
             console.log($scope.state.cfdStartTime);
+            $scope.loading = false;
             $scope.$apply();
         },50)
         
@@ -749,9 +773,10 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
         $scope.boardData = response;
         $scope.state.cfdStartTime =  $scope.state.cfdStartTime ||new Date(parseInt(response.boardCreated));
         updateCfd();
-    }, function (error) {
-        console.log("send message failed");
-    });
+    },function(reject){
+            $scope.loading = false;
+            console.error ("failed to update report",reject);
+        });
 
 
 }]);
@@ -760,41 +785,62 @@ app.controller("SettingsController", [
     '$scope',
     '$location',
     '$routeParams', 
-    'boardDataFactory', 
-    function ($scope,$location,$routeParams, boardDataFactory) {
-    
-    function recieveBoardData (boardData){
-         $scope.boardData = boardData;
-         $scope.quickFilters = $scope.boardData.getQuickfilters();
-         $scope.$apply();
+    'boardDataFactory',
+    'sharedState', 
+    function ($scope,$location,$routeParams, boardDataFactory,state) {
+        $scope.state = state;
+        $scope.state.loading  = ($scope.state.loading)? $scope.state.loading +1 : 1;
+
+        function recieveBoardData (boardData){
+            $scope.state.loading-=1;
+            
+            $scope.boardData = boardData;
+            $scope.quickFilters = $scope.boardData.getQuickfilters();
+            $scope.$apply(); 
+        }
+
+        function getBoardData(){
+            if($scope.state.loading === 2){
+                 boardDataFactory.fetchApiData().then(recieveBoardData,function(reject){
+                    $scope.state.loading -=1;
+                    console.error ("failed to update report",reject);
+       
+                });
+                $scope.state.loading-=1;
+                return
+            }
+            boardDataFactory.getBoardData().then(recieveBoardData,function(reject){
+                $scope.state.loading -=1;
+                console.error ("failed to update report",reject);
+            });
+
+           
+        }
+
+        $scope.apply = ()=>{
+            console.log("Apply");
+            $scope.state.loading += 1 ;
+            $scope.boardData.setActiveQuickFilters($scope.quickFilters);
+            updateUrl("/settings/");
+            
+        };
+
+        let updateUrl = function (route) {
+            $location.url(route + $scope.boardData.jiraUrl.angularUrl());
+            console.log("New url :"  +$location.url());
+        };
+
+        getBoardData();
+       
+       
     }
-
-    function getBoardData(){
-        
-        boardDataFactory.getBoardData().then(recieveBoardData,function(reject){});
-    }
-
-    $scope.apply = ()=>{
-        console.log("Apply");
-       $scope.boardData.setActiveQuickFilters($scope.quickFilters);
-       updateUrl("/settings/");
-       boardDataFactory.fetchApiData().then(recieveBoardData);
-        
-    };
-
-     let updateUrl = function (route) {
-                $location.url(route + $scope.boardData.jiraUrl.angularUrl());
-                console.log("New url :"  +$location.url());
-            };
-
-    getBoardData();
-
-}]);
+]);
 
 
 app.controller("IterationReportController",['$scope', 'boardDataFactory','sharedState',  
                 function ($scope, boardDataFactory,state){
     $scope.state = state;
+    $scope.loading = true;
     if(!$scope.state.iterationStart){
         $scope.state.iterationStart = new Date();
         $scope.state.iterationStart.setDate($scope.state.iterationStart.getDate()-7);
@@ -846,6 +892,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
             $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
             $scope.hasData = true;
             $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),0);
+            $scope.loading = false;
             $scope.$apply();
         },function(reject){});
     }
@@ -868,6 +915,7 @@ app.controller("MontecarloController",
                 , function ($scope, boardDataFactory, state,cfd) {
       console.log ("MontecarloController");
      $scope.title= "Monte carlo simulation";
+     
      $scope.data ;
      $scope.hasData = false;
      $scope.state = state;
@@ -875,36 +923,50 @@ app.controller("MontecarloController",
      $scope.state.passedIterations = $scope.state.passedIterations || 10;
      $scope.state.simulations = $scope.state.simulations || 1000;
      $scope.state.maxRemaining = $scope.state.maxRemaining|| 100;
-     $scope.state.showRemaining = $scope.state.showRemaining || false;
-     $scope.state.stableScope = $scope.state.stableScope || true;
+     $scope.state.focus = $scope.state.focus|| 100;
+    
+     
      $scope.sprintLengths = state.iterationLengths;
 
+     $scope.scope = [{label:"Stable scope",value:true},{label:"Variable scope",value:false}];
+     $scope.state.stableScope = state.selectedOption($scope.scope,$scope.state.stableScope )||$scope.scope[0];
+
+     $scope.graph = [{label:"Throughput/Inflow",value:false},{label:"Remaining Iterations",value:true}];
+     $scope.state.showRemaining = state.selectedOption($scope.graph,$scope.state.showRemaining )||$scope.graph[0];
+
     function updateReport(){        
+        $scope.loading = true;
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
             $scope.boardData = boardData;
-            //setSprintLength();
+            
             let startTime = $scope.dt.getTime()-(($scope.state.passedIterations) * $scope.state.sprintLength.value*7*timeUtil.MILLISECONDS_DAY);
-            $scope.sampleTimes = cfdUtil.generateSampleTimes(startTime, $scope.state.sprintLength.value)
-            $scope.sampleTimes.pop();
+            $scope.sampleTimes = cfdUtil.generateSampleTimes(startTime, $scope.state.sprintLength.value,$scope.dt.getTime());
+            
             var filter = {
                 sampleTimes: $scope.sampleTimes,
                 label: "Tickets"
             };
+
+            $scope.state.backlogLength = ($scope.state.useManualBacklog)?
+                        $scope.state.backlogLength : 
+                        boardData.getBacklogLength($scope.dt.getTime());
                          
             $scope.mc = {
                 passedThroughputData: toValueArray(boardData.getThroughputReport(filter)),
-                passedInflowData: ($scope.state.stableScope)?[0]:toValueArray(boardData.getInflowReport(filter)),
-                backlogLength: boardData.getBacklogLength($scope.dt.getTime()),
+                passedInflowData: ($scope.state.stableScope.value)?[0]:toValueArray(boardData.getInflowReport(filter)),
+                backlogLength:  $scope.state.backlogLength,
                 simulations:$scope.state.simulations,
+                focus: $scope.state.focus,
                 maxRemaining:$scope.state.maxRemaining
             }
             //console.log (JSON.stringify( mc));
             
             $scope.data = new MonteCarloSimulator($scope.mc).simulate();
             $scope.distributions =  $scope.data.aggregatedAsDistributions();
-            console.log ( JSON.stringify($scope.distributions));
-            
+            //console.log ( JSON.stringify($scope.distributions));
+            $scope.sampleTimes.pop();
             $scope.hasData = true;
+            $scope.loading = false;
             $scope.$apply();
             console.log($scope.dt)
         },function(reject){});
@@ -914,13 +976,8 @@ app.controller("MontecarloController",
         updateReport();
     };
 
-     $scope.toggleGraph = function () {
-        $scope.state.showRemaining = !$scope.state.showRemaining ;
-        updateReport();
-    };
-
-     $scope.toggleScope = function () {
-        $scope.state.stableScope = !$scope.state.stableScope ;
+    $scope.toggleScope = function () {
+        //$scope.state.stableScope = !$scope.state.stableScope ;
         updateReport();
     };
 
@@ -930,9 +987,17 @@ app.controller("MontecarloController",
             updateReport();
     };
 
+    $scope.setBacklogLength = function() {
+        if(!$scope.state.useManualBacklog){
+            updateReport();
+        }    
+            
+    };
+
     function toValueArray(arr){
        let result = arr.map(item=>item[1]);
        result.shift();
+       result.pop();
        return result; 
     } 
 
@@ -955,8 +1020,8 @@ app.controller("TabController", [
         function ($scope, $location,$routeParams) {
             $scope.tabs = [];
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
-            $scope.tabs.push({"caption": "Throughput", "active": false, "route": "/throughput/"});
-            $scope.tabs.push({"caption": "Spectral analysis", "active": false, "route": "/spectral/"});
+            $scope.tabs.push({"caption": "Flow", "active": false, "route": "/throughput/"});
+            $scope.tabs.push({"caption": "Leadtimes", "active": false, "route": "/spectral/"});
             $scope.tabs.push({"caption": "Backlog Age", "active": false, "route": "/bl-age/"});
             $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
             $scope.tabs.push({"caption": "Monte Carlo", "active": false, "route": "/montecarlo/"});

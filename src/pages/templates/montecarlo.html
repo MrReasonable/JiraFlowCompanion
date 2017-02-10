@@ -1,105 +1,137 @@
-<div class="container" >
+<div class="container">
 	<div class="row">
 		<div class="col-sm-12">
 			<div class="well">
-                <h4>{{title}}! (BETA)</h4>
-                <quickfilters board-data="boardData"></quickfilters>
-            </div>
-      
-            <div class="col-lg-12">
-                <h4 ng-hide="state.showRemaining">Predicted throughput/{{(state.stableScope)?"Stable scope":"Backlog inflow"}}</h4>
-                <h4 ng-show="state.showRemaining">Predicted Remaining iterations/{{(state.stableScope)?"Stable scope":"Variable scope"}}</h4>
-            </div>
-	    </div>
+				<div class="row">
+					<div class="col-md-4">
+						<label>{{title}} (BETA) </label>
+					</div>
+					<div class="col-md-8">
+						<quickfilters board-data="boardData"></quickfilters>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-lg-12">
+				<h4 ng-hide="state.showRemaining.value">Predicted throughput/{{(state.stableScope)?"Stable scope":"Backlog inflow"}}</h4>
+				<h4 ng-show="state.showRemaining.value">Predicted Remaining iterations/{{(state.stableScope)?"Stable scope":"Variable scope"}}</h4>
+			</div>
+		</div>
 	</div>
 </div>
 <div class="container" style="width: 100%;">
-	<div class="row" ng-hide="state.showRemaining">
-		
-        <div class="col-lg-12">
-			
-			<mc-graph data="distributions"  ></mc-graph>
+	<div class="row">
+
+		<div class="col-lg-12">
+    		<mc-graph data="distributions" ng-hide="state.showRemaining.value"></mc-graph>
+            <mc-remaining-graph data="distributions" simulation-count="state.simulations" ng-show="state.showRemaining.value"></mc-remaining-graph>
 		</div>
-	</div>
-    <div class="row">
-		<div class="col-lg-12" ng-show="state.showRemaining">
-			
-			<mc-remaining-graph data="distributions" simulationCount="state.simulations"></mc-graph>
-		</div>
-	</div>
-</div>
-<div class="container" >
-    <div class="row">
-      
-        <div class="col-md-4">
-            <label>Start date:</label>
-			<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
-        </div>
-        <div class="col-md-4">
-            <div class="form-group">
-                <label>Iteration length(weeks):</label>
-                <select class="form-control" ng-model="state.sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths" >
-                </select>
-            </div>
-        </div>
-        <div class="col-md-4">
-                <div class="form-group">
-                    <label>Passed iterations used for simulation:</label>
-                    <input class="form-control" type="number" ng-model="state.passedIterations" ng-change="updateSprintLength()" >
-                    </input>
-                </div>
-        </div>		
+	
     </div>
+</div>
+
+<div class="container">
+	
+	<div class="row">
+
+		<div class="col-md-4">
+			<label>Start date:</label>
+			<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
+		</div>
+		<div class="col-md-4">
+			<div class="form-group">
+				<label>Iteration length(weeks):</label>
+				<select class="form-control" ng-model="state.sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths">
+                </select>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="form-group">
+				<label>Passed iterations used for simulation:</label>
+				<input class="form-control" type="number" ng-model="state.passedIterations" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
+				
+			</div>
+		</div>
+	</div>
 	<div class="row">
 		<div class="col-md-4">
 			<div class="form-group">
 				<label>Number of simulations:</label>
-				<input class="form-control" type="number" ng-model="state.simulations" ng-change="updateSprintLength()" >
-                </input>
+				<input class="form-control" type="number" ng-model="state.simulations" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
+				
 
 			</div>
 		</div>
 		<div class="col-md-4">
-			<button  ng-click="toggleGraph()" >Toggle graph</download>
-            <button  ng-click="toggleScope()" >{{(state.stableScope)?"Stable scope":"Variable scope"}}</download>
+			<div class="form-group">
+				<label>Scope:</label>
+				<select class="form-control" ng-model="state.stableScope" ng-change="toggleScope()" ng-options="item.label for item in scope">
+                </select>
+
+			</div>
 		</div>
-        <div class="col-md-4">
-			<download filename="ThroughputData" format="dlFormat", data="reportData" ></download>
+		<div class="col-md-4">
+			<div class="form-group">
+				<label>Graph:</label>
+				<select class="form-control" ng-model="state.showRemaining" ng-change="toggleScope()" ng-options="item.label for item in graph">
+                </select>
+
+			</div>
 		</div>
 	</div>
-     <div class="row">
-        <div class="col-md-2">
-            <h4>Sample times:</h4>
-        </div>
-        <div class="col-md-1" ng-repeat="sampleTime in sampleTimes track by $index">
-            <h4>{{sampleTime|date:"y-MM-dd"}}</h4>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-2">
-            <h4>Passed throughputs</h4>
-        </div>
-        <div class="col-md-1" ng-repeat="tp in mc.passedThroughputData track by $index">
-            <h4>{{tp}}</h4>
-        </div>
-    </div>
-     <div class="row">
-        <div class="col-md-2">
-            <h4>Passed inflow</h4>
-        </div>
-        <div class="col-md-1" ng-repeat="inflow in mc.passedInflowData track by $index">
-            <h4>{{inflow}}</h4>
-        </div>
-    </div>
-     <div class="row">
-        <div class="col-md-2">
-            <h4>Backlog Length:</h4>
-        </div>
-        <div class="col-md-1" >
-            <h4>{{mc.backlogLength}}</h4>
-        </div>
-    </div>
-       
-    </div>
-    
+
+    <div class="row" ng-show="state.showRemaining.value">
+
+		<div class="col-md-4">
+			<div class="form-group">
+				<label>Backlog lenght :</label>
+				<input class="form-control" type="number" ng-model="state.backlogLength" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()" ng-disabled="! state.useManualBacklog">
+				<div class="checkbox">
+					<label>
+                        <input type="checkbox" ng-model="state.useManualBacklog" ng-change="setBacklogLength()">
+                            Manual backlog length
+                    </label>
+				</div>
+			</div>
+
+		</div>
+		<div class="col-md-4">
+			<div class="form-group">
+				<label>Focus %:</label>
+				<input class="form-control" type="number" ng-model="state.focus" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
+			</div>
+		</div>
+
+	</div>
+
+	<div class="row">
+		<div class="col-md-1">
+			<h4>Sample times:</h4>
+		</div>
+		<div class="col-md-1" ng-repeat="sampleTime in sampleTimes track by $index">
+			<h4>{{sampleTime|date:"yyMMdd"}}</h4>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-md-1">
+			<h4>Passed throughputs</h4>
+		</div>
+		<div class="col-md-1" ng-repeat="tp in mc.passedThroughputData track by $index">
+			<h4>{{tp}}</h4>
+		</div>
+	</div>
+	<div class="row">
+
+		<div class="col-md-1">
+			<h4>Passed inflow</h4>
+		</div>
+		<div class="col-md-1" ng-repeat="inflow in mc.passedInflowData track by $index">
+			<h4>{{inflow}}</h4>
+		</div>
+	</div>
+
+
 </div>
+
+<div class="loading" ng-show="loading">Loading&#8230;</div>

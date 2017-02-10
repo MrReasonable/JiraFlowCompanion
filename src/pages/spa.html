@@ -9,14 +9,16 @@
 
     <!-- Bootstrap -->
     <link href="../lib/css/deps.css" rel="stylesheet">
-	
+    <link href="spa.css" rel="stylesheet">
+   
 
   </head>
   <body ng-app="kanban">
   	<div ng-controller = "TabController">
-  		<tabset >
-    		<tab ng-repeat="tab in tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="goTo(tab.route)"></tab>
-		</tabset>
+  	
+    <uib-tabset >  
+    		<uib-tab ng-repeat="tab in tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="goTo(tab.route)"></uib-tab>
+		</uib-tabset>
 	</div>
   	<div ng-view></div>
   	

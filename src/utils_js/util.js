@@ -353,10 +353,10 @@ var cfdUtil = {
         }
         return sampleTimes.reverse();
     },
-    generateSampleTimes:function (start,weeksInterval){
+    generateSampleTimes:function (start,weeksInterval,endTime){
         interval = weeksInterval || 1;
         var week = timeUtil.MILLISECONDS_DAY*7;
-        var end = new Date().getTime() + week;
+        var end = (endTime)?endTime+ week:new Date().getTime() + week;
         var first = timeUtil.getMonday(parseInt(start));
         var samples = [];
 

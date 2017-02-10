@@ -76,7 +76,7 @@ function JiraUrl(location){
             query = url.query;
         }
         _.forEach(query, function(values,key){
-            if(key != "view" & key != "chart" & key != "days"  ){
+            if(key != "view" & key != "chart" & key != "days" & key != "projectKey"  ){
                 values.forEach(function(value){
                     result += key + "Id=" +value + "&" ;
                 });
@@ -96,7 +96,7 @@ function JiraUrl(location){
     url.angularQueryString = ()=>{
         let result = "";
         _.forEach(url.query,(value,key)=>{
-            if(value.toString!="" & ["view","chart","days"].indexOf(key)===-1){
+            if(value.toString!="" & ["view","chart","days","projectKey"].indexOf(key)===-1){
                  result += key + "=" + value.toString() +"&"
             }
         });

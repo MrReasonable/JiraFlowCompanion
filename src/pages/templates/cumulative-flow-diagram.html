@@ -2,19 +2,29 @@
 	<div class="row">
 		<div class="col-sm-12">
 			<div class="well">
-        <h1>Cumulative Flow diagram! (BETA)</h1>
-        <quickfilters board-data="boardData"></quickfilters>
-      </div>
+                <div class ="row">
+					<div class="col-md-4">
+						<label>Cumulative flow Diagram (BETA) </label>
+					</div>
+					<div class="col-md-8">
+						<quickfilters board-data="boardData"></quickfilters>
+					</div>
+                </div>
+            </div>
       
       
 		</div>
 	</div>
-
+</div>
+<div class="container" style="width: 100%;">
 	<div class="row">
 		<div class="col-lg-12">
 			<cfd-graph data="cfdDataTable" zero="state.zeroDone" ng-show="hasData"></cfd-graph>
 		</div>
 	</div>
+</div>
+<div class="container" >
+	
   <div class="row">
     <div class="col-me-2"> 
       
@@ -35,7 +45,7 @@
         <div class="row">
 
             <div class="col-md-4">
-                <date-picker dt="state.cfdStartTime" date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
+                <date-picker dt="state.cfdStartTime"  date-changed="startDateChanged()" min-date="boardData.boardCreated" ></date-picker>
             </div>
             <div class="col-md-2">
                     <download filename="CumulativeFlowData" format="dlFormat", data="cfdDataTable" ></download>
@@ -51,3 +61,4 @@
     </div>
   </div>
 </div>
+<div class="loading" ng-show="loading">Loading&#8230;</div>

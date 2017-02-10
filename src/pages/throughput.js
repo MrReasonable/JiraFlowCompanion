@@ -1,5 +1,5 @@
 
-function ThroughputGraphData(data){
+function ThroughputGraphData(data,rollingAverage){
     const self = this;
     self.data = data;
     const nvD3Trans = new NvD3Trans();
@@ -23,7 +23,7 @@ function ThroughputGraphData(data){
                         ,1
                         ,throughputData
                         ,[
-                            nvD3Trans.rollingAverageTransformer( self.rollingAverage)
+                            nvD3Trans.rollingAverageTransformer( rollingAverage)
                             ,nvD3Trans.transformToStream
                         ]));
                      chartData.push(nvD3Trans.generateDataStream(

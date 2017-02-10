@@ -1,12 +1,13 @@
 function SpectralGraphData(data){
-    self = this;
+    const self = this;
     self.data = data;
     let nvD3Trans = new NvD3Trans();
-    self. spectralAnalysisDataStream = ()=>{
+    self. spectralAnalysisDataStream = (samples)=>{
+        
         if(self.data){
             let chartData = [];
             let spectralData = nvD3Trans.createContinousData(self.data);
-            let samples = self.samples||spectralData.length;
+            let drop = samples||spectralData.length;
             chartData.push(nvD3Trans.generateDataStream(
                 "Tickets"
                 ,"bar"
@@ -16,7 +17,7 @@ function SpectralGraphData(data){
                     nvD3Trans.increaseIndexByOne
                     ,nvD3Trans.addEmptyRowFirst
                     ,nvD3Trans.transformToStream
-                    ,_.curry(nvD3Trans.dropRight)(spectralData.length -samples)
+                    ,_.curry(nvD3Trans.dropRight)(spectralData.length -drop)
                 ]));
             chartData.push(nvD3Trans.generateDataStream(
                 "Percent"
@@ -28,7 +29,7 @@ function SpectralGraphData(data){
                     ,nvD3Trans.addEmptyRowFirst
                     ,nvD3Trans.transformToAccSum
                     ,nvD3Trans.transformAccSumToAccPercentage
-                    ,_.curry(nvD3Trans.dropRight)(spectralData.length -samples)
+                    ,_.curry(nvD3Trans.dropRight)(spectralData.length -drop)
                 ]));
             
             

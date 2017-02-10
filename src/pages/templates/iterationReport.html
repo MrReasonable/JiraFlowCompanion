@@ -1,12 +1,18 @@
 <div class="container">
 	<div class="row">
 		<div class="col-sm-12">
-			<div class="well">
-                <h1>Iteration Report (BETA)</h1>
-                <quickfilters board-data="boardData"></quickfilters>
+            <div class="well">
+                <div class="row"> 
+                    <div class="col-md-4">
+                        <label>Iteration Report (Beta) </label>
+                    </div>
+                    <div class="col-md-8">
+                        <quickfilters board-data="boardData"></quickfilters>
+                    </div>
+                </div>
             </div>
-		</div>
-	</div>
+        </div>
+    </div>
 
     <div class="row">
 
@@ -46,3 +52,4 @@
     </div>
   </div>
 </div>
+    <div class="loading" ng-show="loading">Loading&#8230;</div>
