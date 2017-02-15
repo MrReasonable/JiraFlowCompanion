@@ -3,11 +3,15 @@ console.log("CFD_trigger: ");
 function addButton() {
     var textbox ;
 
-    if($("#trigger-button").length){
+    if($("#trigger-button").length & $('#subnav-trigger-report').text() != "Cumulative Flow Diagram"){
+        $("#trigger-button").remove();
+        return;
+    }else if($("#trigger-button").length){
         return;
     }
+
     
-    if($('#subnav-trigger-report').length)  {
+    if($('#subnav-trigger-report').length & $('#subnav-trigger-report').text()==="Cumulative Flow Diagram")  {
         textbox = document.createElement('input');
         textbox.type = 'button';
         textbox.value = "Analyse";
@@ -26,6 +30,8 @@ function addButton() {
 function highlightActiveFilters(){
     $(".ghx-chart-filters").find(".aui-button.active").attr("style", "background-color:#A9BCF5;");
     $(".ghx-chart-filters").find(".aui-button:not(.active)").attr("style", "");
+    $(".aui-inline-dialog-contents").css("overflow","scroll");
+    
 }
 
 function improvePage(){

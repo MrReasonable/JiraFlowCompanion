@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Jira Kanban Data</title>
+    
 
     <!-- Bootstrap -->
     <link href="../lib/css/deps.css" rel="stylesheet">
@@ -14,7 +15,7 @@
 
   </head>
   <body ng-app="kanban">
-  	<div ng-controller = "TabController">
+  	<div ng-controller = "TabController" >
   	
     <uib-tabset >  
     		<uib-tab ng-repeat="tab in tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="goTo(tab.route)"></uib-tab>

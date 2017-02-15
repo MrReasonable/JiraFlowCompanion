@@ -261,41 +261,14 @@ function BoardData(){
         return issues.map(map);
     };
 
-    // filter {resolution:milliseconds,starttime:milliseconds}
+    // filter {resolution:milliseconds,starttime:milliseconds;done:true/false}
     // resolution in milliseconds examples (day,week,month)
-    // starttime in milliseconds Tickets done before starttime does not regiser 
+    // done: true if leadtime false to get backlog age;
+    // Start time in milliseconds start time for leadtime report and time of sample for backlog age. 
     self.getSpectralAnalysisReport = function(filter){
-        let done = self.columns[self.columns.length-1];
         filter = filter || {};
-        let starttime = filter.starttime || 0;
-        let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
-        let startState = filter.startState || _.first(self.columns);
-        var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
-        
-        _.forEach(self.tickets, function(ticket){
-            if(ticket.getDoneTime(done) && ticket.getDoneTime(done)>starttime ){
-                //console.log(ticket.id+",");
-                spectralAnalysisReport.registerLeadtime(ticket.getLeadtime(done,startState));
-            }
-        });
-        return spectralAnalysisReport.getData();
-    }
-
-    self.getBacklogAgeReport = function(filter){
-        let done = self.columns[self.columns.length-1];
-        filter = filter || {};
-        let starttime = filter.starttime || 0;
-        let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
-        var spectralAnalysisReport = new SpectralAnalysisReport(resolution);
-        _.forEach(self.tickets, function(ticket){
-            if(!ticket.getDoneTime(done) || ticket.getDoneTime(done)>starttime ){
-                //console.log(ticket.id+",");
-                spectralAnalysisReport.registerLeadtime(starttime-ticket.enteredBoard());
-            }
-        });
-        let data = spectralAnalysisReport.getData();
-        data[0][0] = filter.label 
-        return spectralAnalysisReport.getData();
+        //filter.done = filter;
+        return leadTimeReport(filter,self);
     }
 
     return self;
@@ -434,26 +407,58 @@ function ThroughputReport(filter){
     return self;
 }
 
-function SpectralAnalysisReport(resolution ){
-    let self = {};
-    
-    self.resolution = resolution || timeUtil.MILLISECONDS_DAY*7;
-    let spectralAnalysisData = {}
 
-    self.registerLeadtime = function(time){
-        var index = Math.floor(time/self.resolution); 
-        if(time==null){
-            return;
-        }
-        if(!spectralAnalysisData[index]){
-            spectralAnalysisData[index]= 0
-        }
-        spectralAnalysisData[index]+=1;
+
+function leadTimeReport(filter,boardData ){
+    let self = {};
+    let doneState = boardData.columns[boardData.columns.length-1];
+    filter = filter || {};
+    let starttime = filter.starttime || 0;
+    let resolution = filter.resolution||timeUtil.MILLISECONDS_DAY*7;
+    let startState = filter.startState || _.first(boardData.columns);
+    let calculateTime = (filter.done)?
+            ticket=>ticket.getLeadtime(doneState,startState):
+            ticket=>{
+                let time =ticket.passedState(startState);
+                if(time==null){
+                  return time;
+                }
+                return starttime-time;
+            };
+           
+    let leadtimeData = {}
+
+    
+    let selectionCriteria = ticket=>ticket.getDoneTime(doneState) && ticket.getDoneTime(doneState)>starttime;
+    if (!filter.done){
+        selectionCriteria = ticket=>!ticket.getDoneTime(doneState) || ticket.getDoneTime(doneState)>starttime;
     }
 
-    self.getData = function(){
+     _.forEach(boardData.tickets, function(ticket){
+            register(ticket);
+    });
+
+
+    
+    
+    function register(ticket){
+        if(selectionCriteria(ticket)){
+            let time = calculateTime(ticket);
+            let index = Math.floor(time/resolution); 
+            if(time==null){
+                return;
+            }
+            if(!leadtimeData[index]){
+                leadtimeData[index]= 0
+            }
+            leadtimeData[index]+=1;
+        }
+        
+    }
+
+    getData = function(){
         let data = [];
-        _.forEach(spectralAnalysisData,function(item,index){
+        _.forEach(leadtimeData,function(item,index){
             data.push([parseInt(index),item]);
         })
         data.sort(function(a,b){
@@ -463,8 +468,11 @@ function SpectralAnalysisReport(resolution ){
        //console.log(JSON.stringify(data));
        return  data;
     } 
-    return self;
+    return getData();
 }
+
+
+
 
 function IterationReport(startTime,duration,doneState,startState){
     const self = this;

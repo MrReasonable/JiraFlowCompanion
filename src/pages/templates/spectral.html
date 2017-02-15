@@ -4,7 +4,7 @@
 			<div class="well">
 				<div class="row">
 					<div class="col-md-4">
-						<label>Spectral Analysis of Done tickets (BETA) </label>
+						<label>Spectral Analysis of {{state.leadTime.label}} (BETA) </label>
 					</div>
 					<div class="col-md-8">
 						<quickfilters board-data="boardData"></quickfilters>
@@ -19,7 +19,7 @@
 
 	<div class="row">
 		<div class="col-lg-12">
-			<spectral-graph data="spectralData" label="Lead time" samples="state.samples" ></spectral-graph>
+			<spectral-graph data="spectralData" label="state.leadTime.label" samples="state.samples" ></spectral-graph>
 		</div>
 	</div>
 </div>
@@ -27,24 +27,26 @@
 <div class="container">
 	<div class="row">
 		<div class="col-md-4">
-			<label>Total Throughput:{{sum}}</label>
+			<label>Total {{state.leadTime.count}}:{{sum}}</label>
 		</div>
 
 		<div class="col-md-4">
-			<label>Average Leadtime:{{average}}</label>
+			<label>Average {{state.leadTime.label}}:{{average}}</label>
 		</div>
 
 		<div class="col-md-4">
-			<label>Median Leadtime:{{median}}</label>
+			<label>Median {{state.leadTime.label}}:{{median}}</label>
 		</div>
 
 	</div>
 
 	<div class="row">
 
-		<div class="col-md-4">
-			<label>Start date:</label>
-			<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
+		<div class="col-md-4" >
+			<div class="form-group" ng-show="state.leadTime.value">
+				<label>Start date:</label>
+				<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
+			</div>
 		</div>
 
 		<div class="col-md-4">
@@ -73,8 +75,15 @@
 		</div>
 		<div class="col-md-4">
 			<div class="form-group">
+				<label>Report Type:</label>
+				<select class="form-control" ng-model="state.leadTime" ng-change="startDateChanged()" ng-options="item.label for item in reportTypes">
+							</select>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="form-group">
 				<label>Download as:</label>
-				<download filename="BacklogAgeData" data="spectralData"></download>
+				<download filename="{{state.leadTime.fileName}}" data="spectralData"></download>
 			</div>
 		</div>
 	</div>

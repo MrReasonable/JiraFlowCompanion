@@ -1,7 +1,7 @@
 {
     "name": "Jira flow companion (beta)",
 
-    "version": "0.0.5",
+    "version": "0.0.6",
     "manifest_version": 2,
     
     "permissions": [
@@ -24,8 +24,8 @@
      "content_scripts": [
     	{
         	"matches": [
-                        "http://*/secure/RapidBoard.jspa?*cumulativeFlowDiagram*",
-                        "https://*/secure/RapidBoard.jspa?*cumulativeFlowDiagram*"
+                        "http://*/secure/RapidBoard.jspa?*",
+                        "https://*/secure/RapidBoard.jspa?*"
                        ],
             "js": [
                     "utils_js/jquery-2.1.1.min.js",
@@ -36,6 +36,4 @@
                   ]
     	}
      ]
-
-    
 }

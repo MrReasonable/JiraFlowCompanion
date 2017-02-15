@@ -534,19 +534,34 @@ app.controller("SpectralController",
      $scope.dt = new Date(state.startTime)||new Date();
      $scope.state.samples = $scope.state.samples||0 ;
      $scope.resolutions = state.resolutionOptions;
-    $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution)  || $scope.resolutions[1];
+     $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution)  || $scope.resolutions[1];
+
+      $scope.reportTypes = [{
+              label:"Lead time",
+              count: "done tickets",
+              fileName:"leadTimeData",
+              value:true
+          },{
+              label:"Ticket age",
+              count: "backlog tickets",
+              fileName:"backlogAgeData",
+              value:false
+          }];
+      $scope.state.leadTime = state.selectedOption($scope.reportTypes,$scope.state.leadTime )||$scope.reportTypes[0];
      
 
     function updateReport(){
+        $scope.loading = true;
         
         boardDataFactory.getBoardData().then(function(boardData){
             let spectralData;
             state.startTime = new Date($scope.dt).getTime();
             $scope.boardData = boardData;
             let filter = {
-                "starttime": state.startTime,
+                "starttime": ($scope.state.leadTime.value)? state.startTime:new Date().getTime(),
                 "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
-                 "label":"Done Tickets"
+                "label":"Done Tickets",
+                "done": $scope.state.leadTime.value
             }
             $scope.columns = boardData.columns;
             $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution);
@@ -585,62 +600,6 @@ app.controller("SpectralController",
 
 
     }]);
-    
-
-
-    app.controller("BacklogAgeController", 
-                [
-                    '$scope', 
-                    'boardDataFactory', 
-                    'nvD3TransformationsFactory',
-                    "sharedState"
-                   , function ($scope, boardDataFactory, throughput,state) {
-      console.log ("Backlog Age Controller");
-     let sum;
-     $scope.state = state;
-     $scope.loading = true;
-     $scope.data ;
-     $scope.hasData = true;
-     $scope.state.samples = $scope.state.samples||0 ;
-     $scope.resolutions = state.resolutionOptions;
-
-     $scope.state.resolution =  state.selectedOption($scope.resolutions,$scope.state.resolution) || $scope.resolutions[1];
-
-    function updateReport(){
-        
-        boardDataFactory.getBoardData().then(function(boardData){
-            let spectralData;
-            $scope.boardData = boardData;
-            $scope.columns = boardData.columns;
-            $scope.state.resolution = $scope.state.resolution =  state.selectedOption($scope.resolutions,$scope.state.resolution);
-            
-            $scope.spectralData = boardData.getBacklogAgeReport({
-                "starttime":  new Date().getTime(),
-                "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
-                "label":"Tickets"
-           });
-            $scope.sum = throughput.sum($scope.spectralData,1);
-            $scope.average = throughput.averageLeadtime($scope.spectralData);
-            $scope.median = throughput.medianLeadtime($scope.spectralData);
-            $scope.hasData = true;
-            $scope.loading = false;
-            $scope.$apply();
-        },function(reject){
-            $scope.loading = false;
-            console.error ("failed to update report",reject);
-        });
-    }
-    
-    $scope.updateResolution = function() {
-            updateReport();
-    };
-
-    updateReport();
-}]);
-
-
-
-
 
 //******************************************************************************************
 // Throughput
@@ -939,7 +898,7 @@ app.controller("MontecarloController",
         boardDataFactory.getBoardData($scope.board).then(function(boardData){
             $scope.boardData = boardData;
             
-            let startTime = $scope.dt.getTime()-(($scope.state.passedIterations) * $scope.state.sprintLength.value*7*timeUtil.MILLISECONDS_DAY);
+            let startTime = $scope.dt.getTime()-(($scope.state.passedIterations) * $scope.state.sprintLength.value*7*timeUtil.MILLISECONDS_DAY );
             $scope.sampleTimes = cfdUtil.generateSampleTimes(startTime, $scope.state.sprintLength.value,$scope.dt.getTime());
             
             var filter = {
@@ -1022,7 +981,6 @@ app.controller("TabController", [
             $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
             $scope.tabs.push({"caption": "Flow", "active": false, "route": "/throughput/"});
             $scope.tabs.push({"caption": "Leadtimes", "active": false, "route": "/spectral/"});
-            $scope.tabs.push({"caption": "Backlog Age", "active": false, "route": "/bl-age/"});
             $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
             $scope.tabs.push({"caption": "Monte Carlo", "active": false, "route": "/montecarlo/"});
             
@@ -1067,9 +1025,6 @@ app.config(['$routeProvider',
             }).when('/spectral/'+jiraUrl, {
                 templateUrl: 'templates/spectral.html',
                 controller: 'SpectralController'
-            }).when('/bl-age/'+jiraUrl, {
-                templateUrl: 'templates/backlog-age.html',
-                controller: 'BacklogAgeController'
             }).when('/iteration-report/'+jiraUrl, {
                 templateUrl: 'templates/iterationReport.html',
                 controller: 'IterationReportController'

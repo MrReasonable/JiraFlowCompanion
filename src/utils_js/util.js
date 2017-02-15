@@ -71,7 +71,7 @@ function TimeUtil() {
         d = new Date(d);
         var day = d.getDay(),
             diff = d.getDate() - day + (day == 0 ? -6:1); // adjust when day is sunday
-        return new Date(d.setDate(diff)).getTime();
+        return this.dayStart(new  Date(d.setDate(diff)).getTime());
     };
 
     this.daysSinceEpoc = function (milliseconds) {
@@ -356,11 +356,11 @@ var cfdUtil = {
     generateSampleTimes:function (start,weeksInterval,endTime){
         interval = weeksInterval || 1;
         var week = timeUtil.MILLISECONDS_DAY*7;
-        var end = (endTime)?endTime+ week:new Date().getTime() + week;
+        var end = (endTime)?endTime:new Date().getTime() + interval*week;
         var first = timeUtil.getMonday(parseInt(start));
         var samples = [];
 
-        for(let index=0; (first + index*week*interval)<end;index++){
+        for(let index=0; (first + index*week*interval)<=end;index++){
             samples.push(first + index*week*interval);
         }
         return samples;
