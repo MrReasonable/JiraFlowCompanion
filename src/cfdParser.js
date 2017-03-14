@@ -4,8 +4,6 @@ function BoardData(){
     self.tickets = {}
 
     self.registerCfdApiResponce = function (apiResponse){
-        var changeTime;
-        var columnChange;
         self.registerColumns(apiResponse.columns);
         self.registerColumnChanges(apiResponse.columnChanges);
     }
@@ -13,7 +11,7 @@ function BoardData(){
     self.registerColumnChanges = function(columnChanges){
        for(let changeTime in columnChanges){  
          _.forEach(columnChanges[changeTime], function(item){
-                columnChange = {};
+                let columnChange = {};
                 columnChange.id = item.key;
                 columnChange.enter = changeTime ;
                 columnChange.column = self.columns[item.columnTo];
@@ -197,7 +195,7 @@ function BoardData(){
         _.forEachRight(self.columns ,function(column){
             indexes[column.name] = index;
             index ++;
-        })
+        });
 
         return indexes;
     }
@@ -223,7 +221,7 @@ function BoardData(){
         let done = self.columns[self.columns.length-1];
         let throughputReport =new ThroughputReport(filter);
         _.forEach(self.tickets,function(ticket){
-            throughputReport.registerDoneTicket( ticket.getDoneTime(_.last(self.columns)));
+            throughputReport.registerDoneTicket( ticket.getDoneTime(_.last(self.columns)),ticket.id);
         });
         return throughputReport.getData();
     };
@@ -235,7 +233,7 @@ function BoardData(){
         let head = throughput.shift();
         inflow.shift();
         throughput =  throughput.map((row,index)=>{
-            return [_.first(row),_.last(inflow[index])-_.last(row)];
+            return [_.first(row),_.last(inflow[index]).length-_.last(row).length];
         });
         throughput.unshift(head);
         return throughput;
@@ -245,7 +243,7 @@ function BoardData(){
     self.getInflowReport = function (filter){
         let throughputReport =new ThroughputReport(filter);
         _.forEach(self.tickets,function(ticket){
-            throughputReport.registerDoneTicket( ticket.enteredBoard());
+            throughputReport.registerDoneTicket( ticket.enteredBoard(),ticket.id);
         });
         return throughputReport.getData();
     };
@@ -265,11 +263,12 @@ function BoardData(){
     // resolution in milliseconds examples (day,week,month)
     // done: true if leadtime false to get backlog age;
     // Start time in milliseconds start time for leadtime report and time of sample for backlog age. 
-    self.getSpectralAnalysisReport = function(filter){
+   
+   self.getSpectralAnalysisReport = function(filter){
         filter = filter || {};
         //filter.done = filter;
         return leadTimeReport(filter,self);
-    }
+    };
 
     return self;
 }
@@ -283,11 +282,11 @@ function Ticket(id){
         if(!columnChangeCount() || columnChange.column != self.latestColumnChange().column){
             self.columnChanges[columnChange.enter] = columnChange;
         }
-    }
+    };
 
     self.latestColumnChange = function (){
         return self.columnChanges[_.last(columnChangeTimes())];
-    }
+    };
 
     function columnChangeCount(){
         return columnChangeTimes().length;
@@ -315,11 +314,11 @@ function Ticket(id){
             }
         });
         return column;
-    }
+    };
 
     self.enteredBoard = function (){
         return _.first(columnChangeTimes());
-    }
+    };
 
     self.getLeadtime = function(doneState,startState){
         var  result = null;
@@ -334,7 +333,7 @@ function Ticket(id){
             
         }
         return result;
-    }
+    };
 
     self.getCfdData = function(filter){
         var start = self.enteredBoard();
@@ -356,7 +355,7 @@ function Ticket(id){
             result = _.last(columnChanges);
         }
         return result;
-    }
+    };
 
     self.passedState = (startState)=>{
          let result = null;
@@ -368,7 +367,7 @@ function Ticket(id){
             }
         });
         return result;
-    }
+    };
 
     return self;
 }
@@ -381,6 +380,7 @@ function ThroughputReport(filter){
         throughputGrid[0][1] = filter.label; 
         _.forEach(filter.sampleTimes,function (sampleTime,index){
             throughputGrid[index+1][0] = sampleTime;
+            throughputGrid[index+1][1] = [];
         });
         
         return throughputGrid;
@@ -388,21 +388,21 @@ function ThroughputReport(filter){
     
     let self = {};
     let throughputReport = buildThroughputGrid(filter);
-    self.registerDoneTicket = function (doneTime){
+    self.registerDoneTicket = function (doneTime,ticketId){
         if(!doneTime){
             return
         }
         _.forEachRight(filter.sampleTimes,function (sampleTime,index){
             if(doneTime>= sampleTime){
-                throughputReport[index+1][1] ++;
+                throughputReport[index+1][1].push(ticketId);
                 return false;
             }
         });
-    }
+    };
     
     self.getData = function (){
         return _.clone(throughputReport);
-    }
+    };
     
     return self;
 }
@@ -426,7 +426,7 @@ function leadTimeReport(filter,boardData ){
                 return starttime-time;
             };
            
-    let leadtimeData = {}
+    let leadtimeData = {};
 
     
     let selectionCriteria = ticket=>ticket.getDoneTime(doneState) && ticket.getDoneTime(doneState)>starttime;
@@ -444,14 +444,15 @@ function leadTimeReport(filter,boardData ){
     function register(ticket){
         if(selectionCriteria(ticket)){
             let time = calculateTime(ticket);
-            let index = Math.floor(time/resolution); 
+            let index;
             if(time==null){
                 return;
             }
+            index = (time===0)?0:1+Math.floor(time/resolution); 
             if(!leadtimeData[index]){
-                leadtimeData[index]= 0
+                leadtimeData[index]= [];
             }
-            leadtimeData[index]+=1;
+            leadtimeData[index].push(ticket.id);
         }
         
     }
@@ -460,14 +461,14 @@ function leadTimeReport(filter,boardData ){
         let data = [];
         _.forEach(leadtimeData,function(item,index){
             data.push([parseInt(index),item]);
-        })
+        });
         data.sort(function(a,b){
             return a[0]-b[0];
-        })
+        });
        data.unshift(["Leadtime","item count"]); 
        //console.log(JSON.stringify(data));
        return  data;
-    } 
+    };
     return getData();
 }
 
@@ -483,14 +484,14 @@ function IterationReport(startTime,duration,doneState,startState){
         if(doneTime && doneTime<startTime+duration && doneTime > startTime ){
             tickets.push(ticket);
         }
-    }
+    };
 
     
 
     self.getData = () =>{
         let data = [];
         function columnNameOrEmpty(ticket,startTime){
-            result = "";
+            let result = "";
             if(ticket.wasInColumn(startTime)){
                 result = ticket.wasInColumn(startTime);
             }

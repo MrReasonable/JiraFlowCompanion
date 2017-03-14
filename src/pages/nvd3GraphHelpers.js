@@ -24,7 +24,15 @@ function NvD3Trans() {
         });
      }
 
-     
+     self.countItems = function(data){
+        return data.map(item=>{
+            if(Array.isArray(item[1])){
+                return [item[0],item[1].length];
+            }else{
+                return item;
+            }
+        })
+    };
      
 
     self.generateDataStream = function (key,type,yAxis, data, transform){
@@ -154,7 +162,9 @@ function NvD3Trans() {
         column = column || 1;
         let sum = 0;
         data.forEach(row =>{
-            if(!isNaN(row[column])){
+            if(Array.isArray(row[column])){
+                 sum +=  row[column].length;
+            }else if(!isNaN(row[column])){
                 sum +=  row[column];
             }
         });
@@ -166,10 +176,14 @@ function NvD3Trans() {
         let total= 0;
         const oneBased = 1;
         const iLeadtime = 0;
-        const iDoneTockets = 1 
+        const iDoneTickets = 1 
         data.forEach(row =>{
-            if(!isNaN(row[iLeadtime]) && !isNaN(row[iDoneTockets])){
-               total +=  (oneBased+row[iLeadtime])*row[iDoneTockets];
+            if(!isNaN(row[iLeadtime])){ 
+                 if(Array.isArray(row[iDoneTickets])){
+                    total +=  (oneBased+row[iLeadtime])*row[iDoneTickets].length;
+                }else if( !isNaN(row[iDoneTickets])){
+                    total +=  (oneBased+row[iLeadtime])*row[iDoneTickets];
+                }
             }
            
         });
@@ -182,7 +196,9 @@ function NvD3Trans() {
         let sum = 0;
         let median = 0;
         _.forEach(data,row =>{
-            if(!isNaN(row[1])){
+             if(Array.isArray(row[1])){
+                 sum +=  row[1].length;
+            }else if(!isNaN(row[1])){
                 sum +=  row[1];
             }
             if(sum >= halfThroghput){

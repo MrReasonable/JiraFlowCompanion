@@ -134,7 +134,13 @@ let jql = {
         if(_.isUndefined(index)){
             index = 0;
         }
-        issues = arr.map( issue => issue[index]);
+        issues = arr.map( issue => {
+           if(Array.isArray(issue)){
+             return issue[index]
+           }
+           return issue; 
+            
+        });
 
         return "issueKey in ("+issues.toString()+")"
     }

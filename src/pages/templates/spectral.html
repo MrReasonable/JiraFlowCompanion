@@ -26,15 +26,15 @@
 
 <div class="container">
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Total {{state.leadTime.count}}:{{sum}}</label>
 		</div>
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Average {{state.leadTime.label}}:{{average}}</label>
 		</div>
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Median {{state.leadTime.label}}:{{median}}</label>
 		</div>
 
@@ -42,21 +42,21 @@
 
 	<div class="row">
 
-		<div class="col-md-4" >
+		<div class="col-sm-4" >
 			<div class="form-group" ng-show="state.leadTime.value">
 				<label>Start date:</label>
 				<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
 			</div>
 		</div>
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Resolution:</label>
 				<select class="form-control" ng-model="state.resolution" ng-change="updateResolution()" ng-options="item.label for item in resolutions"></select>
 			</div>
 		</div>
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Zoom to:</label>
 				<input  type="number" class="form-control" ng-model="state.samples" ng-model-options="{ debounce: 500 }" ng-change="updateResolution()" > 
@@ -66,27 +66,35 @@
 	
 	</div>
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Start state:</label>
 				<select class="form-control" ng-model="state.startState" ng-change="startDateChanged()" ng-options="item.name for item in columns">
 							</select>
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Report Type:</label>
 				<select class="form-control" ng-model="state.leadTime" ng-change="startDateChanged()" ng-options="item.label for item in reportTypes">
 							</select>
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Download as:</label>
 				<download filename="{{state.leadTime.fileName}}" data="spectralData"></download>
 			</div>
 		</div>
 	</div>
+	<div class="row">
+		<div class="col-sm-4">
+			<div class="checkbox">
+				<label><input type="checkbox" ng-model="state.showTicketTable" >Show report as table</label>
+			</div>
+		</div>
+	</div>
+	<div class="row" ng-show="state.showTicketTable"><report-tickets-table report-data="spectralData" url="url" header="header"></report-tickets-table></div>
 </div>
 
 

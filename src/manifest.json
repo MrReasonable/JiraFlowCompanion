@@ -1,7 +1,7 @@
 {
     "name": "Jira flow companion (beta)",
 
-    "version": "0.0.6",
+    "version": "0.0.8",
     "manifest_version": 2,
     
     "permissions": [
@@ -14,7 +14,7 @@
     "background":
         {
             "scripts": [
-                        "/utils_js/lodash.js",
+                        "lib/js/deps.js",
                         "utils_js/util.js",
                         "utils_js/jiraUtil.js",
                         "background/background.js"],
@@ -28,8 +28,7 @@
                         "https://*/secure/RapidBoard.jspa?*"
                        ],
             "js": [
-                    "utils_js/jquery-2.1.1.min.js",
-                    "utils_js/lodash.js",
+                    "lib/js/deps.js",
                     "utils_js/util.js",
                     "utils_js/jiraUtil.js",
                     "contentScripts/trigger.js"

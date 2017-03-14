@@ -1,523 +1,5 @@
 //spa.js
 
-
-
-console.log(window.location.href);
-var app = angular.module("kanban", ['ngRoute', 'ui.bootstrap','nvd3']);
-
-
-app.component("iterationReportTable",{
-    template:`<table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th  ng-repeat="cell in $ctrl.head track by $index">
-                            {{cell}}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr  ng-repeat="row in $ctrl.data  track by $index">
-                        <td >
-                            <label><a href="{{$ctrl.url}}{{row[0]}}" target="_blank"> {{row[0]}}</a></label>
-                        </td>
-                        <td>
-                            {{row[1]}}
-                        </td>
-                        <td>
-                            {{row[2]}}
-                        </td>
-                        <td>
-                            {{row[3]}}
-                        </td>
-                        <td>
-                            {{row[4]}}
-                        </td>
-                    </tr>
-                </tbody>
-              </table>`,
-    bindings:{
-        reportData: '<',
-        url:'<'
-    },
-    controller:function(){
-        console.log("linkUrl:"+this.url);
-        let self = this;
-        self.$onChanges = function (changes) {
-                if (changes.reportData) {
-                    let reportData = _.cloneDeep(changes.reportData.currentValue);
-                    if(reportData){
-                        self.head = reportData.shift();
-                        self.data = reportData;
-                    }
-                    
-                }
-          };  
-    }
-});
-
-app.component("quickFilters",{
-    template:` 
-    <div class="row">QuickFilters</div>
-    <div class="row" >
-        <div class="col-lg-12>
-            <div class="btn-group-lg">
-                <button ng-repeat="filter in $ctrl.quickFilters" class="{{ $ctrl.getClass(filter.id) }}" ng-click="$ctrl.toggle(filter.id)">{{filter.name}} </button>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <button class="btn-primary" ng-click="$ctrl.apply()">Apply</buttom>
-    </div>
-    `,
-    bindings:{
-        quickFilters:'=',
-        apply:'&'
-    },
-    controller: function(){
-        self = this;
-        
-        function findFilter(id){
-            return self.quickFilters.find((filter)=>{
-                return filter.id === id
-            });
-        }
-        
-        self.getClass = (id)=>{
-            if(findFilter(id).selected){
-                return "btn-success";
-            }
-            return "btn_default";
-        }
-
-        self.toggle= (id)=>{
-            findFilter(id).selected = !findFilter(id).selected;
-        }
-    }
-});
-
-app.component ("datePicker",{
-    template: ` <p class="input-group">
-                    <input type="text" class="form-control" uib-datepicker-popup="yyyy-MM-dd" ng-model="$ctrl.dt"  
-                    ng-change="$ctrl.dateChanged()" ng-model-options='{ debounce: 1000 }' is-open="$ctrl.opened" min-date="$ctrl.start" 
-                    max-date="$ctrl.today" ng-required="true" close-text="Close" />
-                    <span class="input-group-btn">
-                        <button type="button" class="btn btn-default" ng-click="$ctrl.open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
-                    </span>
-                 </p>`,
-    bindings:{
-        dt: '=',
-        dateChanged:'&',
-        minDate: '<'
-    },
-
-    controller: function(){
-        self = this
-        self.today = new Date();
-        
-        
-        
-        self.open = function ($event) {
-            $event.preventDefault();
-            $event.stopPropagation();
-            self.opened = true;
-        };
-    }
-});
-
-app.component("quickfilters",{
-      template: `<span><strong>{{$ctrl.boardName}}</strong> Filters: | </span>
-                 <span ng-repeat="filter in $ctrl.filters"> {{filter}} | </span>
-                `,
-      bindings:{
-          boardData:'<'
-      },
-      controller: function(){
-         var self =this;
-         self.filters= [];
-         self.boardName = "(jiraBoard)";
-         self.$onChanges = function (changes) {
-                if (changes.boardData) {
-                    let boardData = changes.boardData.currentValue;
-                    if(boardData){
-                        self.boardData = boardData
-                        self.filters = boardData.getActiveQuickfilters();
-                        self.boardName = self.boardData.boardName;
-                    }
-                    
-                }
-          };  
-      }
-  });
- 
- app.component("download",{
-      template: ' <button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asCSV()">CSV</button><button type="button" class="btn btn-default navbar-btn" ng-click="$ctrl.asJson()">JSON</button>',
-      bindings: { 
-          format: '&',
-          filename: '@',
-          data: '<'
-      },
-      controller: function(){
-        var self =this;
-
-        self.asCSV = function () {
-          downloadAsCSV(format(self.data), self.filename);
-        };
-
-        self.asJson = function () {
-            downloadAsJson(format(self.data), self.filename);
-        };
-
-        function format (){
-            var data = self.data;
-            if(_.isFunction(self.format())){
-                data = self.format()(data);
-            }
-            return data;
-        };
-
-      }
-  });
-
-  app.component("cfdGraph",{
-      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
-      bindings: {
-          data: '<',
-          zero: '<'
-      },
-      controller: [ 'cfdFactory', function(cfd){
-          var self = this;
-
-          self.chartData; 
-          this.$onChanges = function (changes) {
-                if (changes.data) {
-                    self.chartData = transform(changes.data.currentValue);
-                }
-          }; 
-          
-          function transform(data){
-                if(data){
-                    let cfdChartData = cfd.buildCfdChartData(data);
-                    if (self.zero) {
-                        cfdChartData = cfd.doneStartsFrom0(cfdChartData);
-                    }
-                    return cfdChartData;
-                }
-                return ;
-                
-          }
-
-          self.options = {
-                chart: {
-                    type: 'stackedAreaChart',
-                    height: 450,
-                    margin : {
-                        top: 20,
-                        right: 20,
-                        bottom: 30,
-                        left: 40
-                    },
-                    x: function(d){return d[0];},
-                    y: function(d){return d[1];},
-                    useVoronoi: false,
-                    clipEdge: true,
-                    duration: 100,
-                    useInteractiveGuideline: true,
-                    xAxis: {
-                        showMaxMin: false,
-                        tickFormat: function(d) {
-                            return d3.time.format('%Y-%m-%d')(new Date(d))
-                        }
-                    },
-                    yAxis: {
-                        rotateLabels: 45,
-                        tickFormat: function(d){
-                            return d3.format(',.0f')(d);
-                        }
-                    },
-                    zoom: {
-                        enabled: true,
-                        scaleExtent: [1, 10],
-                        useFixedDomain: false,
-                        useNiceScale: false,
-                        horizontalOff: false,
-                        verticalOff: true,
-                        unzoomEventType: 'dblclick.zoom'
-                    }
-                }
-            };
-        
-        
-          self.config = {
-              refreshDataOnly: false, // default: true
-          };
-        
-      }]
-  });
-
-
-app.component("spectralGraph",{
-      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
-      bindings: {
-          data: '<',
-          samples:'<?',
-          label: '@'
-      },
-      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
-          var self = this;
-          self.samples = self.samples || 0;
-          self.chartData={};
-          this.$onChanges = function (changes) {
-                if (changes.data) {
-                    self.chartData = new SpectralGraphData(changes.data.currentValue).spectralAnalysisDataStream(self.samples);
-                }
-                if(changes.label){
-                    self.options.chart.xAxis.axisLabel = changes.label.currentValue;
-                }
-          }; 
-          
-           self.options = new NvD3ChartOptions().spectralGraph();
-          
-        
-          self.config = {
-              refreshDataOnly: false, // default: true
-          };
-        
-      }]
-  });
-
-app.component("mcGraph",{
-      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
-      bindings: {
-          data: '<'
-      },
-      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
-          const self = this;
-          self.chartData;
-          
-          this.$onChanges = function (changes) {
-                if (changes.data) {
-                    self.chartData = new MonteCarloGraphData(changes.data.currentValue).backlogDevelopmentStreams();
-                }
-          }; 
-          
-         
-           self.options = new NvD3ChartOptions().spectralGraph();
-           self.options.chart.yAxis1.axisLabel = "Likelyhood %";
-           self.options.chart.yAxis2.axisLabel = "Confidence %";
-           self.options.chart.xAxis.axisLabel = "Throughput, In flow / iteration ";
-        
-          self.config = {
-              refreshDataOnly: false, // default: true
-          };
-        
-      }]
-  });
-
-  app.component("mcRemainingGraph",{
-      template: '<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>',
-      bindings: {
-          data: '<'
-      },
-      controller: [ 'nvD3TransformationsFactory', function(nvd3Trans){
-          const self = this;
-          self.chartData;
-          
-          self.$onChanges = function (changes) {
-                if (changes.simulationCount){
-                    self.simulationCount = changes.simulationCount.currentValue;
-                }
-                if (changes.data) {
-                    self.chartData = MonteCarloGraphData(changes.data.currentValue)
-                                        .remainingIterationsDataStreams();
-                }
-          }; 
-          
-          self.options = new NvD3ChartOptions().spectralGraph();
-          self.options.chart.yAxis1.axisLabel = "Likelyhood %";
-          self.options.chart.yAxis2.axisLabel = "Confidence %";
-          self.options.chart.xAxis.axisLabel = "Iterations until done";
-
-          self.config = {
-              refreshDataOnly: false, // default: true
-          };
-        
-      }]
-  });
-
-
-app.component("throughputGraph",{
-      template: `<nvd3 options="$ctrl.options" data="$ctrl.chartData" config="$ctrl.config" ></nvd3>`,
-      bindings: {
-          data: '<',
-          rollingAverage: '<'
-      },
-      controller: [ 'nvD3TransformationsFactory', function(nvD3Trans){
-          var self = this;
-
-          self.chartData;
-          this.$onChanges = function (changes) {
-                if (changes.data) {
-                    self.chartData = new ThroughputGraphData(changes.data.currentValue,self.rollingAverage).throughputDataStreams(); 
-                }
-          }; 
-          
-           self.options = new NvD3ChartOptions().historicalBarChart(); 
-        
-        
-          self.config = {
-              refreshDataOnly: false, // default: true
-          };
-        
-      }]
-  });
-
-
-
-app.factory("cfdFactory", function () {
-    var factory = {};
-
-    factory.buildCfdChartData = function (cfdData) {
-        var chartData = [];
-        var lane, day;
-        var laneData;
-        console.log("buildCfdChartData");
-        if (cfdData.length === 0) {
-            return cfdData;
-        }
-        for (lane = 1; lane < cfdData[0].length; lane++) {
-            laneData = {};
-            laneData.key = cfdData[0][lane];
-            laneData.values = [];
-            for (day = 1; day < cfdData.length; day++) {
-                laneData.values.push([cfdData[day][0], cfdData[day][lane]]);
-            }
-            chartData.push(laneData);
-        }
-        return chartData;
-    };
-
-    factory.readableDatesOnCfdData = cfdUtil.readableDatesOnCfdData;
-
-    factory.doneStartsFrom0 = function (cfdChartData) {
-        cfdChartData = _.cloneDeep(cfdChartData);
-        var doneAccumulated = cfdChartData[0].values[0][1];
-        _.forEach(cfdChartData[0].values, function (value) {
-            value[1] = value[1] - doneAccumulated;
-        });
-        return cfdChartData;
-    };
-
-    return factory;
-});
-
-
-app.factory("boardDataFactory",['$routeParams', function (routeParams) {
-    var factory = {};
-    var data;
-    var jiraUrl;
-    var boardConfig; 
-    
-    function parseRouteParams(){
-        let url = {};
-        let hostParts;
-        url.protocol = routeParams.protocol;
-        hostParts = routeParams.host.split(":")
-        url.host = _.first(hostParts);
-        url.port = (hostParts.length = 2)?_.last(hostParts):"";
-        url.query = JiraUrl().parseAngularQueryString(routeParams.query);
-        return new JiraUrl(url); 
-    }
-
-    factory.fetchApiData = function(){
-       jiraUrl = jiraUrl||parseRouteParams();
-       return new Promise((resolve,reject)=>{
-            let configPromise =  sendRestRequest(jiraUrl.boardConfigApiUrl());
-            let cfdDataPromise = sendRestRequest(jiraUrl.cfdApiUrl());
-            Promise.all([configPromise,cfdDataPromise]).then(response => {
-                let boardConfig = _.first(response);
-                let cfdData = _.last(response)
-                data = new BoardData();
-                data.registerCfdApiResponce(cfdData);
-                data.registerBoardConfig(boardConfig);
-                data.registerjiraUrl(jiraUrl);
-                resolve(data);
-            });
-        })
-    };
-
-    factory.updateBoardData = ()=>{
-        return factory.fetchApiData();
-    }
-    
-    factory.getBoardData = function (url) {
-         return new Promise(function (resolve, reject) {
-             if(data){
-                 resolve(data);
-             }else{
-                factory.fetchApiData().then(boardData =>  {
-                    data = boardData;
-                    resolve(data)
-                },function(error){
-                    reject();
-                });
-             }
-        });
-    };
-         
-    return factory;
-}]);
-
-app.factory("nvD3TransformationsFactory", function () {
-    return new NvD3Trans();
-});
-
-app.factory("sharedState",function(){
-    var state = {
-        "startTime": new Date().getTime()-365*timeUtil.MILLISECONDS_DAY,
-    }
-
-    state.resolutionOptions = [
-        {value:1, label:"1 day"},
-        {value:7, label:"1 week"},
-        {value:14, label:"2 weeks"},
-        {value:21, label:"3 weeks"},
-        {value:30, label:"1 month"}
-    ];
-
-    state.iterationLengths = [
-        {"value":1,"label":"1 week"},
-        {"value":2,"label":"2 weeks"},
-        {"value":3,"label":"3 weeks"},
-        {"value":4,"label":"4 weeks"},
-     ];
-
-    state.selectedOption = (options,selected)=>{
-        let result = null;
-        if(!selected){
-            return result;
-        }
-        let match = (option,selected) =>{
-           let same = true;
-            _.forEach(option,(value,key)=>{
-                if(key.indexOf("$$")=== -1){
-                    same = value === selected[key];
-                    return !same;
-                }
-            });
-          return same;  
-        }
-        _.forEach(options,option=>{
-            let found =match(option,selected);
-            result = option;
-            if(found){
-                return false;
-            }
-        }); 
-        return result;
-    }
-    return state;
-});
-
 app.controller("SpectralController", 
                 [
                     '$scope', 
@@ -526,9 +8,7 @@ app.controller("SpectralController",
                     "sharedState"
                    , function ($scope, boardDataFactory, nvD3Trans,state) {
       console.log ("SpectralController");
-     let sum;
      $scope.state = state;
-     $scope.data ;
      $scope.loading = true;
      
      $scope.dt = new Date(state.startTime)||new Date();
@@ -553,14 +33,13 @@ app.controller("SpectralController",
     function updateReport(){
         $scope.loading = true;
         
-        boardDataFactory.getBoardData().then(function(boardData){
-            let spectralData;
+        function update(boardData){
             state.startTime = new Date($scope.dt).getTime();
             $scope.boardData = boardData;
             let filter = {
                 "starttime": ($scope.state.leadTime.value)? state.startTime:new Date().getTime(),
                 "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
-                "label":"Done Tickets",
+                "label":$scope.state.leadTime.label,
                 "done": $scope.state.leadTime.value
             }
             $scope.columns = boardData.columns;
@@ -569,17 +48,18 @@ app.controller("SpectralController",
             if($scope.state.startState){
                 filter.startState = $scope.state.startState;
             }
-            
+            $scope.header=[$scope.state.leadTime.label+" "+$scope.state.resolution.unit,$scope.state.leadTime.count]
             $scope.spectralData = boardData.getSpectralAnalysisReport(filter);
             $scope.sum = nvD3Trans.sum($scope.spectralData,1);
             $scope.average = nvD3Trans.averageLeadtime($scope.spectralData);
             $scope.median = nvD3Trans.medianLeadtime($scope.spectralData);
+            $scope.url = $scope.boardData.jiraUrl.issueUrl(""); 
             $scope.loading = false;
-            $scope.$apply();
-        },function(reject){
-            $scope.loading = false;
-            console.error ("failed to update report",reject);
-        });
+            
+        }
+
+        boardDataFactory.updateReport(update);
+       
     }
 
         $scope.startDateChanged = function () {
@@ -634,17 +114,17 @@ app.controller("ThroughputController",
     
     function updateReport(){
         $scope.loading = true;
-        boardDataFactory.getBoardData($scope.board).then(function(boardData){
+        function update (boardData){
             $scope.state.startTime = new Date($scope.dt).getTime();
-            console.log($scope.dt)
+            console.log($scope.dt);
             $scope.boardData = boardData;
+             $scope.url = $scope.boardData.jiraUrl.issueUrl(""); 
             setSprintLength();
             var filter = {
                 sampleTimes: cfdUtil.generateSampleTimes( 
                     $scope.state.startTime, $scope.state.sprintLength.value),
                 label: $scope.state.reportType.label
             };
-             
             
             $scope.reportData = boardData[$scope.state.reportType.value](filter)
             $scope.title = $scope.state.reportType.label;
@@ -652,12 +132,12 @@ app.controller("ThroughputController",
             $scope.average = Math.floor($scope.sum/($scope.reportData.length-2));
             $scope.hasData = true;
             $scope.loading = false;
-            $scope.$apply();
             console.log($scope.dt)
-        },function(reject){
-            $scope.loading = false;
-            console.error ("failed to update report",reject);
-        });
+            
+        }
+
+         boardDataFactory.updateReport(update);
+
     }
 
     $scope.startDateChanged = function () {
@@ -666,8 +146,8 @@ app.controller("ThroughputController",
 
 
     let setSprintLength = ()=>{
-        $scope.state.sprintLength = $scope.state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)  || $scope.sprintLengths[0];
-    }
+        $scope.state.sprintLength = $scope.state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)  || $scope.sprintLengths[1];
+    };
     
     $scope.updateSprintLength = function() {
             updateReport();
@@ -698,19 +178,16 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
 
     function updateCfd() {
          $scope.loading = true;
-        setTimeout(()=>{
-            var filter = getFilterParameters();
-            $scope.cfdDataTable = $scope.boardData.getCfdData(filter);
-            if ($scope.cfdDataTable.length === 0) {
-                return;
-            }
-            $scope.hasData = true;
-           
-            console.log($scope.state.cfdStartTime);
-            $scope.loading = false;
-            $scope.$apply();
-        },50)
         
+        var filter = getFilterParameters();
+        $scope.cfdDataTable = $scope.boardData.getCfdData(filter);
+        if ($scope.cfdDataTable.length === 0) {
+            return;
+        }
+        $scope.hasData = true;
+        
+        console.log($scope.state.cfdStartTime);
+        $scope.loading = false;
     }
 
     
@@ -740,60 +217,6 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
 
 }]);
 
-app.controller("SettingsController", [
-    '$scope',
-    '$location',
-    '$routeParams', 
-    'boardDataFactory',
-    'sharedState', 
-    function ($scope,$location,$routeParams, boardDataFactory,state) {
-        $scope.state = state;
-        $scope.state.loading  = ($scope.state.loading)? $scope.state.loading +1 : 1;
-
-        function recieveBoardData (boardData){
-            $scope.state.loading-=1;
-            
-            $scope.boardData = boardData;
-            $scope.quickFilters = $scope.boardData.getQuickfilters();
-            $scope.$apply(); 
-        }
-
-        function getBoardData(){
-            if($scope.state.loading === 2){
-                 boardDataFactory.fetchApiData().then(recieveBoardData,function(reject){
-                    $scope.state.loading -=1;
-                    console.error ("failed to update report",reject);
-       
-                });
-                $scope.state.loading-=1;
-                return
-            }
-            boardDataFactory.getBoardData().then(recieveBoardData,function(reject){
-                $scope.state.loading -=1;
-                console.error ("failed to update report",reject);
-            });
-
-           
-        }
-
-        $scope.apply = ()=>{
-            console.log("Apply");
-            $scope.state.loading += 1 ;
-            $scope.boardData.setActiveQuickFilters($scope.quickFilters);
-            updateUrl("/settings/");
-            
-        };
-
-        let updateUrl = function (route) {
-            $location.url(route + $scope.boardData.jiraUrl.angularUrl());
-            console.log("New url :"  +$location.url());
-        };
-
-        getBoardData();
-       
-       
-    }
-]);
 
 
 app.controller("IterationReportController",['$scope', 'boardDataFactory','sharedState',  
@@ -816,7 +239,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
 
     $scope.sprintLengths = state.iterationLengths;
 
-    $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength) || $scope.sprintLengths[0];
+    $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength) || $scope.sprintLengths[1];
     
     $scope.updateSprintLength = function() {
             updateReport();
@@ -833,8 +256,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
             $scope.boardData = boardData;
             $scope.columns = boardData.columns;
             setStartState();
-            //$scope.state.sprintLength = $scope.sprintLengths.find(sprintlength=> sprintlength.value === $scope.state.sprintLength.value);
-           
+            
             $scope.url = $scope.boardData.jiraUrl.issueUrl("");        
             let reportData =  boardData.getIterationReport($scope.startTime
                                                           ,$scope.state.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
@@ -852,7 +274,7 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
             $scope.hasData = true;
             $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),0);
             $scope.loading = false;
-            $scope.$apply();
+            //$scope.$apply();
         },function(reject){});
     }
 
@@ -875,7 +297,6 @@ app.controller("MontecarloController",
       console.log ("MontecarloController");
      $scope.title= "Monte carlo simulation";
      
-     $scope.data ;
      $scope.hasData = false;
      $scope.state = state;
      $scope.dt = new Date();
@@ -911,8 +332,8 @@ app.controller("MontecarloController",
                         boardData.getBacklogLength($scope.dt.getTime());
                          
             $scope.mc = {
-                passedThroughputData: toValueArray(boardData.getThroughputReport(filter)),
-                passedInflowData: ($scope.state.stableScope.value)?[0]:toValueArray(boardData.getInflowReport(filter)),
+                passedThroughputData: toValueArray(new NvD3Trans().countItems(boardData.getThroughputReport(filter))),
+                passedInflowData: ($scope.state.stableScope.value)?[0]:toValueArray(new NvD3Trans().countItems(boardData.getInflowReport(filter))),
                 backlogLength:  $scope.state.backlogLength,
                 simulations:$scope.state.simulations,
                 focus: $scope.state.focus,
@@ -926,7 +347,6 @@ app.controller("MontecarloController",
             $scope.sampleTimes.pop();
             $scope.hasData = true;
             $scope.loading = false;
-            $scope.$apply();
             console.log($scope.dt)
         },function(reject){});
     }
@@ -961,7 +381,7 @@ app.controller("MontecarloController",
     } 
 
     let setSprintLength = ()=>{
-        $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)||$scope.sprintLengths[0];
+        $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)||$scope.sprintLengths[1];
     }
 
     setSprintLength();
@@ -1011,30 +431,3 @@ app.controller("TabController", [
 
 
 
-app.config(['$routeProvider',
-    
-    function ($routeProvider) {
-        let jiraUrl = ":protocol/:host/:query/";
-        $routeProvider.
-            when('/cfd/'+jiraUrl, {
-               templateUrl: 'templates/cumulative-flow-diagram.html',
-               controller: 'CfdController'
-            }).when('/throughput/'+jiraUrl, {
-                templateUrl: 'templates/throughput.html',
-                controller: 'ThroughputController'
-            }).when('/spectral/'+jiraUrl, {
-                templateUrl: 'templates/spectral.html',
-                controller: 'SpectralController'
-            }).when('/iteration-report/'+jiraUrl, {
-                templateUrl: 'templates/iterationReport.html',
-                controller: 'IterationReportController'
-            }).when('/montecarlo/'+jiraUrl, {
-                templateUrl: 'templates/montecarlo.html',
-                controller: 'MontecarloController'
-            }).when('/settings/'+jiraUrl, {
-                templateUrl: 'templates/settings.html',
-                controller: 'SettingsController'
-            }).otherwise({
-                redirectTo: '/cfd/'+jiraUrl
-            });
-    }]);

@@ -2,8 +2,8 @@
 	<div class="row">
 		<div class="col-sm-12">
 			<div class="well">
-                <h4>Spectral Analysis! (BETA)</h4>
-                <quickfilters board-data="boardData"></quickfilters>
+                <h4>Settings! (BETA)</h4>
+                <quickfilters board-data="vm.boardData"></quickfilters>
             </div>
 		</div>
 	</div>
@@ -11,8 +11,8 @@
 <div class="container">
 	<div class="row">
 		<div class="col-lg-12">
-			 <quick-filters quick-filters="quickFilters" apply="apply()" ></quick-filters>
+			 <quick-filters quick-filters="vm.quickFilters" apply="vm.apply()" ></quick-filters>
 		</div>
 	</div>
 </div>
-<div class="loading" ng-show="state. 	loading">Loading&#8230;</div>
+<div class="loading" ng-show="vm.state.loading">Loading&#8230;</div>

@@ -4,10 +4,12 @@ function ThroughputGraphData(data,rollingAverage){
     self.data = data;
     const nvD3Trans = new NvD3Trans();
 
+    
     self.throughputDataStreams = ()=>{
                 if(data){
                     let chartData = [];
-                    let throughputData = data;
+                    let throughputData = _.clone(data);
+                    throughputData.pop();
                     
                     chartData.push(nvD3Trans.generateDataStream(
                             self.data[0][1]
@@ -15,6 +17,7 @@ function ThroughputGraphData(data,rollingAverage){
                             ,1
                             ,throughputData
                             ,[
+                                nvD3Trans.countItems,
                                 nvD3Trans.transformToStream
                             ]));
                     chartData.push(nvD3Trans.generateDataStream(

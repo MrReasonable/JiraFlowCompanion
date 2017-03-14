@@ -355,10 +355,11 @@ var cfdUtil = {
     },
     generateSampleTimes:function (start,weeksInterval,endTime){
         interval = weeksInterval || 1;
-        var week = timeUtil.MILLISECONDS_DAY*7;
-        var end = (endTime)?endTime:new Date().getTime() + interval*week;
-        var first = timeUtil.getMonday(parseInt(start));
-        var samples = [];
+        let week = timeUtil.MILLISECONDS_DAY*7;
+        let end = (endTime)?endTime/*+ interval*week*/:new Date().getTime() + interval*week;
+        let count = Math.ceil((end-parseInt(start))/(interval*week));
+        let first = timeUtil.getMonday(end - count*interval*week);
+        let samples = [];
 
         for(let index=0; (first + index*week*interval)<=end;index++){
             samples.push(first + index*week*interval);

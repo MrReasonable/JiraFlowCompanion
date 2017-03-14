@@ -25,29 +25,29 @@
 
 <div class="container">
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Total {{title}}:{{sum}}</label>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Average {{title}}:{{average}}</label>
 		</div>
 	</div>
 
 	<div class="row">
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Start date:</label>
 			<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
-				<label>Iteration length(weeks):</label>
+				<label>Iteration length:</label>
 				<select class="form-control" ng-model="state.sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths">
 						</select>
 
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Rolling average :</label>
 				<input class="form-control" type="number" ng-model="state.rollingAverage" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
@@ -57,7 +57,7 @@
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Report type:</label>
 				<select class="form-control" ng-model="state.reportType" ng-change="updateSprintLength()" ng-options="item.label for item in reportTypes">
@@ -65,10 +65,18 @@
 
 			</div>
 		</div>
-		<div class="col-md-8">
+		<div class="col-sm-4">
 			<download filename="ThroughputData" format="dlFormat" , data="reportData"></download>
 		</div>
+		<div class="col-sm-4">
+			<div class="checkbox">
+				<label><input type="checkbox" ng-model="state.showTicketTable" >Show report as table</label>
+			</div>
+		</div>
+
 	</div>
+	<div class="row" ng-show="state.showTicketTable"><report-tickets-table report-data="reportData" url="url" format="dlFormat"></report-tickets-table></div>
+	 
 
 </div>
 <div class="loading" ng-show="loading">Loading&#8230;</div>

@@ -34,18 +34,18 @@
 
 	<div class="row">
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<label>Start date:</label>
 			<date-picker dt="dt" date-changed="startDateChanged()" min-date="boardData.boardCreated"></date-picker>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
-				<label>Iteration length(weeks):</label>
+				<label>Iteration length:</label>
 				<select class="form-control" ng-model="state.sprintLength" ng-change="updateSprintLength()" ng-options="item.label for item in sprintLengths">
                 </select>
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Passed iterations used for simulation:</label>
 				<input class="form-control" type="number" ng-model="state.passedIterations" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
@@ -54,7 +54,7 @@
 		</div>
 	</div>
 	<div class="row">
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Number of simulations:</label>
 				<input class="form-control" type="number" ng-model="state.simulations" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
@@ -62,7 +62,7 @@
 
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Scope:</label>
 				<select class="form-control" ng-model="state.stableScope" ng-change="toggleScope()" ng-options="item.label for item in scope">
@@ -70,7 +70,7 @@
 
 			</div>
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Graph:</label>
 				<select class="form-control" ng-model="state.showRemaining" ng-change="toggleScope()" ng-options="item.label for item in graph">
@@ -82,7 +82,7 @@
 
 	<div class="row" ng-show="state.showRemaining.value">
 
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Backlog lenght :</label>
 				<input class="form-control" type="number" ng-model="state.backlogLength" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()"
@@ -96,7 +96,7 @@
 			</div>
 
 		</div>
-		<div class="col-md-4">
+		<div class="col-sm-4">
 			<div class="form-group">
 				<label>Focus %:</label>
 				<input class="form-control" type="number" ng-model="state.focus" ng-model-options='{ debounce: 500 }' ng-change="updateSprintLength()">
@@ -106,32 +106,32 @@
 	</div>
 
 	<div class="row">
-		<div class="col-md-3">
-			<div class="col-md-12">
+		<div class="col-sm-3">
+			<div class="col-sm-12">
 				<label>Sample iteration starts:</label>
 			</div>
-			<div class="col-md-12" ng-repeat="sampleTime in sampleTimes track by $index">
+			<div class="col-sm-12" ng-repeat="sampleTime in sampleTimes track by $index">
 				<h4>{{sampleTime|date:"yyyy-MM-dd"}}</h4>
 			</div>
 		</div>
 
 
 
-		<div class="col-md-3">
-			<div class="col-md-12">
+		<div class="col-sm-3">
+			<div class="col-sm-12">
 				<label>Throughput samples</label>
 			</div>
-			<div class="col-md-12" ng-repeat="tp in mc.passedThroughputData track by $index">
+			<div class="col-sm-12" ng-repeat="tp in mc.passedThroughputData track by $index">
 				<h4>{{tp}}</h4>
 			</div>
 		</div>
 
 
-		<div class="col-md-3">
-			<div class="col-md-12">
+		<div class="col-sm-3">
+			<div class="col-sm-12">
 				<label>Inflow samples</label>
 			</div>
-			<div class="col-md-12" ng-repeat="inflow in mc.passedInflowData track by $index">
+			<div class="col-sm-12" ng-repeat="inflow in mc.passedInflowData track by $index">
 				<h4>{{inflow}}</h4>
 			</div>
 		</div>
