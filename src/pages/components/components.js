@@ -1,3 +1,10 @@
+
+    app.filter( 'time', function() {
+        return function( input ) {
+            return new TimeUtil().timeFormat(input);
+        }
+    });
+
 app.component("iterationReportTable",{
     template:`<table class="table table-striped">
                 <thead>
@@ -8,21 +15,21 @@ app.component("iterationReportTable",{
                     </tr>
                 </thead>
                 <tbody>
-                    <tr  ng-repeat="row in $ctrl.data  track by $index">
+                    <tr  ng-repeat="row in $ctrl.data | orderBy:'done'  track by $index">
                         <td >
-                            <label><a href="{{$ctrl.url}}{{row[0]}}" target="_blank"> {{row[0]}}</a></label>
+                            <label><a href="{{$ctrl.url}}{{row.id}}" target="_blank"> {{row.id}}</a></label>
                         </td>
                         <td>
-                            {{row[1]}}
+                            {{row.done | date:'yyyy-MM-dd'}}
                         </td>
                         <td>
-                            {{row[2]}}
+                            {{row.leadTime | time }}
                         </td>
                         <td>
-                            {{row[3]}}
+                            {{row.cycleTime | time}}
                         </td>
                         <td>
-                            {{row[4]}}
+                            {{row.startedIterationInColumn }}
                         </td>
                     </tr>
                 </tbody>
@@ -177,6 +184,25 @@ app.component("download",{
     }
 });
 
+app.component("ticketList",{
+    template:` <div class="col-sm-2" ng-repeat="ticket in $ctrl.tickets |limitTo: $ctrl.show as shownTickets  track by $index">
+                    <label ><a href="{{$ctrl.url}}{{ticket}}" target="_blank">{{ticket}}</a></label>
+                </div>
+                <div class="col-sm-2">
+                     <label ng-hide="shownTickets.length === $ctrl.tickets.length" ng-click=" $ctrl.show = $ctrl.tickets.length">show more...</label>
+                </div>`
+               ,
+    bindings:{
+        tickets:'<',
+        url:'<'
+    },
+    controller: function(){
+        let self = this;
+        self.show = 11;
+    }
+    
+});
+
 app.component("reportTicketsTable",{
     template:`<div class="row">
                     <div class='col-md-2'  >
@@ -192,9 +218,7 @@ app.component("reportTicketsTable",{
                     </div>
 
                     <div class="col-md-8">
-                        <div class="col-sm-2" ng-repeat="ticket in row[1]  track by $index">
-                            <label ><a href="{{$ctrl.url}}{{ticket}}" target="_blank">{{ticket}}</a></label>
-                        </div>
+                        <ticket-list tickets="row[1]" url="$ctrl.url" ></ticket-list>
                     </div>
                     <div class="col-md-2" ng-if="row[1].length">
                         <jira-find-issues-link issues="row[1]"></jira-find-issues-link>

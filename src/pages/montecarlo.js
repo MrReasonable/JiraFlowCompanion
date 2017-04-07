@@ -95,7 +95,7 @@
                 if(self.data){
                     let chartData = [];
                     let simulationCount = transformer.count(self.data.remaining);
-                    self.data.remaining.forEach(item=>simulationCount+=item[1])
+                    
                     
                     self.data.remaining.unshift([,]);
                     let remainingIterations = transformer.createContinousData(self.data.remaining);

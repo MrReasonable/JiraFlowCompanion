@@ -15,10 +15,10 @@
 
   </head>
   <body ng-app="kanban">
-  	<div ng-controller = "TabController" >
+  	<div ng-controller = "TabController as vm" >
   	
     <uib-tabset >  
-    		<uib-tab ng-repeat="tab in tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="goTo(tab.route)"></uib-tab>
+    		<uib-tab ng-repeat="tab in vm.tabs" heading="{{tab.caption}}" active="tab.active" disabled="tab.disabled" ng-click="vm.goTo(tab.route)"></uib-tab>
 		</uib-tabset>
 	</div>
   	<div ng-view></div>
@@ -41,6 +41,9 @@
     <script type="text/javascript" src="spa.js"></script>
     <script type="text/javascript" src="components/components.js"></script>
     <script type="text/javascript" src="factories/factories.js"></script>
+
+    <script type="text/javascript" src="montecarloController.js"></script>
+    <script type="text/javascript" src="tabController.js"></script>
     <script type="text/javascript" src="settingsController.js"></script>
     <script type="text/javascript" src="router.js"></script>
     <script type="text/javascript" src="analytics.js"></script>

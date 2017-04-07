@@ -142,7 +142,11 @@ function NvD3Trans() {
             let avg; 
             for(let i=index-(over-1);i<=index;i++){
                 if(i>=0){
-                    sum += _.last(arr[i]);
+                    if(Array.isArray(_.last(arr[i]))){
+                        sum += _.last(arr[i]).length;
+                    } else{
+                        sum += _.last(arr[i]);
+                    }
                     samples++;
                 }
             }

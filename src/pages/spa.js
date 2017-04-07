@@ -41,7 +41,7 @@ app.controller("SpectralController",
                 "resolution": $scope.state.resolution.value*timeUtil.MILLISECONDS_DAY,
                 "label":$scope.state.leadTime.label,
                 "done": $scope.state.leadTime.value
-            }
+            };
             $scope.columns = boardData.columns;
             $scope.state.resolution =  $scope.state.selectedOption($scope.resolutions,$scope.state.resolution);
             $scope.state.startState = $scope.state.selectedOption($scope.columns,$scope.state.startState);
@@ -108,7 +108,7 @@ app.controller("ThroughputController",
          {label:"Inflow",value:"getInflowReport"},
          {label:"Backlog growth",value:"getBacklogGrowthReport"},
          
-    ]
+    ];
 
     $scope.state.reportType = $scope.state.selectedOption($scope.reportTypes,$scope.state.reportType) || $scope.reportTypes[0]; 
     
@@ -272,9 +272,8 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
             
             $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
             $scope.hasData = true;
-            $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),0);
+            $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),'id');
             $scope.loading = false;
-            //$scope.$apply();
         },function(reject){});
     }
 
@@ -291,142 +290,12 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
 
 }]);
 
-app.controller("MontecarloController", 
-                ['$scope', 'boardDataFactory','sharedState',"cfdFactory"
-                , function ($scope, boardDataFactory, state,cfd) {
-      console.log ("MontecarloController");
-     $scope.title= "Monte carlo simulation";
-     
-     $scope.hasData = false;
-     $scope.state = state;
-     $scope.dt = new Date();
-     $scope.state.passedIterations = $scope.state.passedIterations || 10;
-     $scope.state.simulations = $scope.state.simulations || 1000;
-     $scope.state.maxRemaining = $scope.state.maxRemaining|| 100;
-     $scope.state.focus = $scope.state.focus|| 100;
-    
-     
-     $scope.sprintLengths = state.iterationLengths;
-
-     $scope.scope = [{label:"Stable scope",value:true},{label:"Variable scope",value:false}];
-     $scope.state.stableScope = state.selectedOption($scope.scope,$scope.state.stableScope )||$scope.scope[0];
-
-     $scope.graph = [{label:"Throughput/Inflow",value:false},{label:"Remaining Iterations",value:true}];
-     $scope.state.showRemaining = state.selectedOption($scope.graph,$scope.state.showRemaining )||$scope.graph[0];
-
-    function updateReport(){        
-        $scope.loading = true;
-        boardDataFactory.getBoardData($scope.board).then(function(boardData){
-            $scope.boardData = boardData;
-            
-            let startTime = $scope.dt.getTime()-(($scope.state.passedIterations) * $scope.state.sprintLength.value*7*timeUtil.MILLISECONDS_DAY );
-            $scope.sampleTimes = cfdUtil.generateSampleTimes(startTime, $scope.state.sprintLength.value,$scope.dt.getTime());
-            
-            var filter = {
-                sampleTimes: $scope.sampleTimes,
-                label: "Tickets"
-            };
-
-            $scope.state.backlogLength = ($scope.state.useManualBacklog)?
-                        $scope.state.backlogLength : 
-                        boardData.getBacklogLength($scope.dt.getTime());
-                         
-            $scope.mc = {
-                passedThroughputData: toValueArray(new NvD3Trans().countItems(boardData.getThroughputReport(filter))),
-                passedInflowData: ($scope.state.stableScope.value)?[0]:toValueArray(new NvD3Trans().countItems(boardData.getInflowReport(filter))),
-                backlogLength:  $scope.state.backlogLength,
-                simulations:$scope.state.simulations,
-                focus: $scope.state.focus,
-                maxRemaining:$scope.state.maxRemaining
-            }
-            //console.log (JSON.stringify( mc));
-            
-            $scope.data = new MonteCarloSimulator($scope.mc).simulate();
-            $scope.distributions =  $scope.data.aggregatedAsDistributions();
-            //console.log ( JSON.stringify($scope.distributions));
-            $scope.sampleTimes.pop();
-            $scope.hasData = true;
-            $scope.loading = false;
-            console.log($scope.dt)
-        },function(reject){});
-    }
-
-    $scope.startDateChanged = function () {
-        updateReport();
-    };
-
-    $scope.toggleScope = function () {
-        //$scope.state.stableScope = !$scope.state.stableScope ;
-        updateReport();
-    };
-
-    
-
-    $scope.updateSprintLength = function() {
-            updateReport();
-    };
-
-    $scope.setBacklogLength = function() {
-        if(!$scope.state.useManualBacklog){
-            updateReport();
-        }    
-            
-    };
-
-    function toValueArray(arr){
-       let result = arr.map(item=>item[1]);
-       result.shift();
-       result.pop();
-       return result; 
-    } 
-
-    let setSprintLength = ()=>{
-        $scope.state.sprintLength = state.selectedOption($scope.sprintLengths,$scope.state.sprintLength)||$scope.sprintLengths[1];
-    }
-
-    setSprintLength();
-    updateReport();
-}]);
 
 
 
 
 
-app.controller("TabController", [
-        '$scope',
-        '$location',
-        '$routeParams',
-        function ($scope, $location,$routeParams) {
-            $scope.tabs = [];
-            $scope.tabs.push({"caption": "CFD", "active": false, "route": "/cfd/"});
-            $scope.tabs.push({"caption": "Flow", "active": false, "route": "/throughput/"});
-            $scope.tabs.push({"caption": "Leadtimes", "active": false, "route": "/spectral/"});
-            $scope.tabs.push({"caption": "Iteration Report", "active": false, "route": "/iteration-report/"});
-            $scope.tabs.push({"caption": "Monte Carlo", "active": false, "route": "/montecarlo/"});
-            
-            $scope.tabs.push({"caption": "Settings", "active": false, "route": "/settings/"});
-            
-            $scope.setActiveTab = function (url) {
-                _.forEach($scope.tabs, function (tab) {
-                    if (url.indexOf(tab.route) > -1) {
-                        tab.active = true;
-                        return;
-                    }
-                    tab.active = false;
-                });
-            };
 
-            $scope.goTo = function (route) {
-                console.log("go from :"  + $location.url());
-                $location.url(route + $routeParams.protocol + "/" + $routeParams.host +"/"+ $routeParams.query);
-                $scope.setActiveTab($location.url());
-                console.log("go to :"  +$location.url());
-            };
-
-            $scope.setActiveTab($location.url());
-        }
-    ]
-);
 
 
 

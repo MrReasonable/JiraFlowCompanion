@@ -17,7 +17,8 @@ app.config(['$routeProvider',
             controller: 'IterationReportController'
         }).when('/montecarlo/'+jiraUrl, {
             templateUrl: 'templates/montecarlo.html',
-            controller: 'MontecarloController'
+            controller: 'MontecarloController',
+            controllerAs: 'vm'
         }).when('/settings/'+jiraUrl, {
             templateUrl: 'templates/settings.html',
             controller: 'SettingsController',

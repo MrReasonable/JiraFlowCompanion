@@ -128,21 +128,35 @@ function JiraUrl(location){
 }
 
 
-let jql = {
+const jql = {
     findIssuesInArray:function(arr,index){
         let issues;
-        if(_.isUndefined(index)){
+        if(Array.isArray(arr[0]) && _.isUndefined(index)){
             index = 0;
+        }else if(!Array.isArray(arr[0]) & _.isUndefined(index)){
+            index = 'id';
         }
         issues = arr.map( issue => {
-           if(Array.isArray(issue)){
+           if(Array.isArray(issue)|| issue instanceof Object){
              return issue[index]
            }
+
+
            return issue; 
             
         });
 
         return "issueKey in ("+issues.toString()+")"
+    },
+    issueInfoRequest:function (arr,index){
+        let data = {};
+        data.jql = this.findIssuesInArray(arr,index);
+        data.fields = [
+            "key",
+            "customfield_10701",//serviceArea", 
+            "customfield_11200" //epicLink
+        ];
+        //curl -D- -u admin:admin -X POST -H "Content-Type: application/json" --data '{"jql":"project = QA","startAt":0,"maxResults":2,"fields":["id","key"]}' "http://kelpie9:8081/rest/api/2/search"
     }
 }
 

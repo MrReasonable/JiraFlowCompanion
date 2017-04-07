@@ -354,7 +354,7 @@ var cfdUtil = {
         return sampleTimes.reverse();
     },
     generateSampleTimes:function (start,weeksInterval,endTime){
-        interval = weeksInterval || 1;
+        let interval = weeksInterval || 1;
         let week = timeUtil.MILLISECONDS_DAY*7;
         let end = (endTime)?endTime/*+ interval*week*/:new Date().getTime() + interval*week;
         let count = Math.ceil((end-parseInt(start))/(interval*week));

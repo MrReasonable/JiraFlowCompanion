@@ -1,13 +1,17 @@
 {
     "name": "Jira flow companion (beta)",
 
-    "version": "0.0.8",
+    "version": "0.0.91",
     "manifest_version": 2,
     
+    "icons": { "16": "icn16.png",
+           "48": "icn48.png",
+          "128": "icn128.png" },
+
     "permissions": [
-        "unlimitedStorage",
         "tabs"
     ],
+
 
      "content_security_policy": "script-src 'self' 'unsafe-eval' https://ssl.google-analytics.com; object-src 'self'",
 

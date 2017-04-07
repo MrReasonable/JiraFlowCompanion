@@ -250,7 +250,7 @@ function BoardData(){
 
     self.getIterationReport = (startTime,duration,startState)=>{
         let iterationReport = new IterationReport(startTime,duration,_.last(self.columns),startState);
-        _.forEach(self.tickets,iterationReport.registerTicket);
+        _.forEachRight(self.tickets,iterationReport.registerTicket);
         return iterationReport.getData();
     };
 
@@ -480,10 +480,14 @@ function IterationReport(startTime,duration,doneState,startState){
     const tickets = [];
     
     self.registerTicket= (ticket) =>{
-        let doneTime = ticket.getDoneTime(doneState); 
-        if(doneTime && doneTime<startTime+duration && doneTime > startTime ){
-            tickets.push(ticket);
+        let latestChange = ticket.latestColumnChange().enter; 
+        if(latestChange < startTime+duration && latestChange > startTime){
+            let doneTime = ticket.getDoneTime(doneState); 
+            if(doneTime /* && doneTime<startTime+duration && doneTime > startTime*/ ){
+                tickets.push(ticket);
+            }
         }
+        
     };
 
     
@@ -500,13 +504,13 @@ function IterationReport(startTime,duration,doneState,startState){
     
         data.push(["Ticket","Done","Lead time","Cycle time","Started in"])
         tickets.forEach(ticket=>{
-            let row = [
-                ticket.id,
-                ticket.getDoneTime(doneState),
-                ticket.getLeadtime(doneState),
-                (startState)?ticket.getLeadtime(doneState,startState):null,
-                columnNameOrEmpty(ticket,startTime)
-            ];
+            let row = {
+                id: ticket.id,
+                done: ticket.getDoneTime(doneState),
+                leadTime: ticket.getLeadtime(doneState),
+                cycleTime: (startState) ? ticket.getLeadtime(doneState, startState) : null,
+                startedIterationInColumn: columnNameOrEmpty(ticket, startTime)
+            };
             data.push(row);
         });
         return data;

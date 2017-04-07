@@ -11,7 +11,7 @@ function addButton() {
     }
 
     
-    if($('#subnav-trigger-report').length & $('#subnav-trigger-report').text()==="Cumulative Flow Diagram")  {
+    if($('#subnav-trigger-report').length & ($('#subnav-trigger-report').text()==="Cumulative Flow Diagram" || $('#subnav-title').text()==="Cumulative Flow Diagram"))  {
         textbox = document.createElement('input');
         textbox.type = 'button';
         textbox.value = "Analyse";
