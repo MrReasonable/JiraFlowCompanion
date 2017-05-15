@@ -63,6 +63,7 @@ app.factory("boardDataFactory",['$routeParams','$q','$http','$rootScope','$timeo
                 method : "GET",
                 url : jiraUrl.cfdApiUrl()
             });
+            console.log("Jira cfd api url: " +jiraUrl.cfdApiUrl());
             $q.all([configPromise,cfdDataPromise]).then(response => {
                 let boardConfig = _.first(response).data;
                 let cfdData = _.last(response).data
@@ -87,7 +88,10 @@ app.factory("boardDataFactory",['$routeParams','$q','$http','$rootScope','$timeo
     self.getBoardData = function () {
         return new $q(function (resolve, reject) {
             if(data){
-                resolve(data);
+                $timeout(()=>{
+                    resolve(data);
+                });
+                
 
             }else{
                 self.fetchApiData().then(boardData =>  {
@@ -105,7 +109,9 @@ app.factory("boardDataFactory",['$routeParams','$q','$http','$rootScope','$timeo
     self.updateReport =function(update){
 
         if(data){
-            update(data);
+            $timeout(()=>{
+                update(data);
+            });
         }else{
             self.getBoardData().then(update,function(reject){
                 //$scope.loading = false;

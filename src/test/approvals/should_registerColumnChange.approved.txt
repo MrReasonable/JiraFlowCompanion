@@ -1,1 +1,1 @@
-{"DFOL-79":{"id":"DFOL-79","columnChanges":{"1318524408000":{"id":"DFOL-79","enter":"1318524408000","column":"TODO"},"1352135771000":{"id":"DFOL-79","enter":"1352135771000","column":"DONE"}}}}
+{"DFOL-79":{"id":"DFOL-79","columnChanges":{"1318524408000":{"id":"DFOL-79","enter":"1318524408000","column":{"index":2,"name":"TODO"}},"1352135771000":{"id":"DFOL-79","enter":"1352135771000","column":{"index":4,"name":"DONE"}}}}}

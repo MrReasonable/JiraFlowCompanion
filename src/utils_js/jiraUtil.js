@@ -1,4 +1,5 @@
 function Url(location){
+    //console.log("Url("+JSON.stringify(location) + ")");
     var self = {};
     self.host = location.hostname||location.host;
     //self.path = location.pathname||location.path;
@@ -106,10 +107,15 @@ function JiraUrl(location){
     url.parseAngularQueryString = (queryString)=>{
         let query ={};
         let components = queryString.split("&");
+        // console.log("url.parseAngularQueryString("+JSON.stringify(queryString) + ")");
         components.forEach(component=>{
             let parts = component.split("=");
-            query[_.first(parts)] = JSON.parse("["+_.last(parts)+"]");
-        })
+            try {
+                query[_.first(parts)] = JSON.parse("["+_.last(parts)+"]");
+            }catch (e){
+                console.log("Failed to parse query parameter :"+ JSON.stringify(parts));
+            }
+        });
         url.query = query;
         return query;
     }

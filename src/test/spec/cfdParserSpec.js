@@ -10,21 +10,21 @@ describe("jira CFD api responce parser ", function() {
 		}
 	};
 
-	var cfdParser = new CfdApiResponceParser();
+	var boardData = new BoardData();
 
 
 	approveIt("should parse columns", function(approvals) {
-		var flowData  = cfdParser.parse(basicResponse);
-		approvals.verify(flowData.columns);
+		boardData.registerCfdApiResponce(basicResponse);
+		approvals.verify(boardData.columns);
 	});
 
 	approveIt("should registerColumnChange", function(approvals) {
-		var flowData  = cfdParser.parse(basicResponse);
-		approvals.verify(flowData.tickets);
+		boardData.registerCfdApiResponce(basicResponse);
+		approvals.verify(boardData.tickets);
 	});
 });
 
-describe ("FlowData", function(){
+describe ("BoardData", function(){
 
 	var columns = ["column1", "column2", "done"];
 
@@ -75,7 +75,7 @@ describe ("FlowData", function(){
 
 	});
 
-	approveIt("should give throughput data",function(approvals){
+	describe("Flow", function(){
 		var flowData = new BoardData();
 		var cfdMatrix;
 		
@@ -93,11 +93,77 @@ describe ("FlowData", function(){
 		flowData.registerColumnChange(columnChange2);
 		flowData.registerColumnChange(columnChange3);
 
-		let throughputReport = flowData.getThroughputReport(filter);
+		approveIt("should give throughput data",function(approvals){
+			let throughputReport = flowData.getThroughputReport(filter);
+			approvals.verify(throughputReport);
+		});
 
-		approvals.verify(throughputReport);
+		approveIt("should give inflow data",function(approvals){
+			let throughputReport = flowData.getInflowReport(filter);
+			approvals.verify(throughputReport);
+		});
+
+		approveIt("should give backlog growth data",function(approvals){
+			let backlogGrowthReport = flowData.getBacklogGrowthReport(filter);
+			approvals.verify(backlogGrowthReport);
+		});
+
 
 	});
+
+	describe("Lead Times",()=>{
+		var flowData = new BoardData();
+		flowData.registerCfdApiResponce(cfdApiResponse);
+		
+		function leadTimeReport(spectralReportFilter){
+			return  flowData.getSpectralAnalysisReport(spectralReportFilter);
+		}
+
+		approveIt("should give lead time report",function(approvals){
+			approvals.verify(leadTimeReport({"starttime":1460376510030,"resolution":604800000,"label":"Lead time","done":true}));
+		});
+
+		approveIt("should give lead time report with 1 day resolution",function(approvals){
+			approvals.verify(leadTimeReport({"starttime":1460376510030,"resolution":86400000,"label":"Lead time","done":true}));
+		});
+
+		approveIt("should give cycle time report with 1 day resolution",function(approvals){
+			approvals.verify(leadTimeReport({"starttime":1460376510030,"resolution":86400000,"label":"Lead time","done":true,"startState":{"index":4,"name":"Analyze"}}));
+		});
+
+		
+		approveIt("should give ongoing since report with 1 day resolution",function(approvals){
+			approvals.verify(leadTimeReport({"starttime":1491914186437,"resolution":604800000,"label":"Ticket age","done":false,"startState":{"index":4,"name":"Analyze"}}));
+		});
+
+		approveIt("should give backlog age report with 1 day resolution",function(approvals){
+			approvals.verify(leadTimeReport({"starttime":1491914186437,"resolution":604800000,"label":"Ticket age","done":false}));
+		});
+
+
+	});
+
+	describe("Iteration report",()=>{
+		//getIterationReport (startTime,duration,startState)
+		var flowData = new BoardData();
+		flowData.registerCfdApiResponce(cfdApiResponse);
+
+		approveIt("should give empty iteration report",function(approvals){
+			approvals.verify(flowData.getIterationReport(1483258930088,604800000));
+		});
+		
+		approveIt("should give iteration report",function(approvals){
+			approvals.verify(flowData.getIterationReport(1485764530088,604800000));
+		});
+
+		approveIt("should give iteration report with cycle times",function(approvals){
+			approvals.verify(flowData.getIterationReport(1485764530088,604800000,{"index":4,"name":"Analyze"}));
+		});
+		
+	});
+
+	
+	
 
 	
 });

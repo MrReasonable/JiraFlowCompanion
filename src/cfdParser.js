@@ -3,22 +3,51 @@ function BoardData(){
 
     self.tickets = {}
 
+    function filtercolumnChanges(columnChanges,filter){
+        let filteredChanges = {};
+         for(let changeTime in columnChanges){  
+            let changes = [];
+             _.forEach(columnChanges[changeTime], function(change){
+                if(filter(change)){
+                    changes.push(change);
+                }
+                
+            });
+            if(changes.length){
+                filteredChanges[changeTime] = changes;
+            }
+        }
+        return filteredChanges;
+    }
+    
     self.registerCfdApiResponce = function (apiResponse){
         self.registerColumns(apiResponse.columns);
         self.registerColumnChanges(apiResponse.columnChanges);
     }
 
     self.registerColumnChanges = function(columnChanges){
+      /*columnChanges = filtercolumnChanges(columnChanges,change=>{
+           let include = ["DFOL-13937","DFOL-13963","DFOL-13972","DFOL-14003","DFOL-14006","DFOL-14019","DFOL-14022","DFOL-14027","DFOL-14033","DFOL-14042","TECH-27497","DFOL-14090","DFOL-14101","DFOL-14105","DFOL-14136","DFOL-14149","DFOL-14150","DFOL-14157","DFOL-14158","DFOL-14169","DFOL-14272","DFOL-14324","DFOL-14332","DFOL-14335","DFOL-14387","DFOL-14484","DFOL-14485","DFOL-14671","DFOL-14697"];
+           if(include.indexOf(change.key)!==-1){
+               return true;
+           }
+           return false;
+      });//*/
+      //console.log("columnChanges :" + JSON.stringify(columnChanges));
        for(let changeTime in columnChanges){  
          _.forEach(columnChanges[changeTime], function(item){
-                let columnChange = {};
-                columnChange.id = item.key;
-                columnChange.enter = changeTime ;
-                columnChange.column = self.columns[item.columnTo];
+                if(!item.columnFrom || item.columnFrom!== item.columnTo){
+                    let columnChange = {};
+                    columnChange.id = item.key;
+                    columnChange.enter = changeTime ;
+                    columnChange.column = self.columns[item.columnTo];
+                    
+                    self.registerColumnChange(columnChange);
+                }
                 
-                self.registerColumnChange(columnChange);
             });
        }
+       //console.log("Tickets:" + JSON.stringify(Object.keys(self.tickets)));
     }
 
     self.registerColumns = function(jiraColumns){
@@ -249,6 +278,7 @@ function BoardData(){
     };
 
     self.getIterationReport = (startTime,duration,startState)=>{
+        //console.log("getIterationReport("+startTime+","+duration+","+JSON.stringify(startState)+")")
         let iterationReport = new IterationReport(startTime,duration,_.last(self.columns),startState);
         _.forEachRight(self.tickets,iterationReport.registerTicket);
         return iterationReport.getData();
@@ -279,7 +309,7 @@ function Ticket(id){
     self.columnChanges = {};
 
     self.registerColumnChange = function(columnChange){
-        if(!columnChangeCount() || columnChange.column != self.latestColumnChange().column){
+        if(!columnChangeCount() || columnChange.column !== self.latestColumnChange().column){
             self.columnChanges[columnChange.enter] = columnChange;
         }
     };

@@ -10,9 +10,8 @@
     <!--link rel="stylesheet" type="text/css" href="lib/prettydiff.css"-->
     <link rel="stylesheet" type="text/css" href="lib/diffview.css" media="all">
     <script type="text/javascript" src="lib/filesaver.js"></script>
-    <script type="text/javascript" src="/lib/lodash.js"></script>
-    <script type="text/javascript" src="/lib/jquery-2.1.1.min.js"></script>
-
+    <script type="text/javascript" src="../lib/js/deps.js"></script>
+    
     <script type="text/javascript" src="lib/jasmine-2.0.3/jasmine.js"></script>
     <script type="text/javascript" src="lib/jasmine-2.0.3/jasmine-html.js"></script>
     <script type="text/javascript" src="lib/jasmine-2.0.3/boot.js"></script>
@@ -21,11 +20,14 @@
 
 
     <!-- include source files here... -->
-  <script type="text/javascript" src="utils_js/util.js"></script>
-  <script type="text/javascript" src="cfdParser.js"></script>
+  <script type="text/javascript" src="../utils_js/jiraUtil.js"></script>
+  <script type="text/javascript" src="../utils_js/util.js"></script>
+  <script type="text/javascript" src="../cfdParser.js"></script>
 
   <!-- include spec files here... -->
+  <script type="text/javascript" src="data/jiraCfdApiResponse.js"></script>
   <script type="text/javascript" src="spec/cfdParserSpec.js"></script>
+  <script type="text/javascript" src="spec/jiraUtilSpec.js"></script>
 
 
 </head>
