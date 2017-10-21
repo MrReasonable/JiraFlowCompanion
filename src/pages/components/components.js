@@ -189,7 +189,7 @@ app.component("ticketList",{
                     <label ><a href="{{$ctrl.url}}{{ticket}}" target="_blank">{{ticket}}</a></label>
                 </div>
                 <div class="col-sm-2">
-                     <label ng-hide="shownTickets.length === $ctrl.tickets.length" ng-click=" $ctrl.show = $ctrl.tickets.length">show more...</label>
+                     <label ng-hide="shownTickets.length === $ctrl.tickets.length" ng-click=" $ctrl.show = $ctrl.tickets.length">show all..</label>
                 </div>`
                ,
     bindings:{
@@ -208,8 +208,11 @@ app.component("reportTicketsTable",{
                     <div class='col-md-2'  >
                         {{$ctrl.head[0]}}
                     </div>
-                    <div class='col-md-10'  >
+                    <div class='col-md-9'  >
                         {{$ctrl.head[1]}}
+                    </div>
+                    <div class="col-md-1" ng-if="$ctrl.allIssues.length">
+                        <jira-find-issues-link issues="$ctrl.allIssues"></jira-find-issues-link>
                     </div>
                 </div>
                 <div class="row"  ng-repeat="row in $ctrl.data  track by $index">
@@ -251,6 +254,13 @@ app.component("reportTicketsTable",{
                         self.head = self.header;
                     }
 
+                    self.allIssues = [];
+                    reportData.forEach(item=>{
+                        "use strict";
+                        item[1].forEach(issue=>{
+                            self.allIssues.push(issue);
+                        });
+                    });
                     self.data = reportData;
                 }
 
@@ -260,7 +270,7 @@ app.component("reportTicketsTable",{
 });
 
 app.component("jiraFindIssuesLink",{
-    template: `<a calss" button-default " href="{{$ctrl.queryLink}}" target="_blank">See in Jira</a>`,
+    template: `<a calss" button-default " href="{{$ctrl.queryLink}}" target="_blank">JIRA</a>`,
     bindings:{
         issues:'<'
     },
@@ -453,8 +463,11 @@ app.component("throughputGraph",{
         var self = this;
 
         this.$onChanges = function (changes) {
-            if (changes.data.currentValue) {
+            if (changes.data && changes.data.currentValue) {
                 self.chartData = new ThroughputGraphData(changes.data.currentValue,self.rollingAverage).throughputDataStreams();
+            }
+            if (changes.rollingAverage && changes.rollingAverage.currentValue) {
+                self.chartData = new ThroughputGraphData(self.data.currentValue,changes.rollingAverage.currentValue).throughputDataStreams();
             }
         };
 

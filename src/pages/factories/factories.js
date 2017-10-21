@@ -66,18 +66,47 @@ app.factory("boardDataFactory",['$routeParams','$q','$http','$rootScope','$timeo
             console.log("Jira cfd api url: " +jiraUrl.cfdApiUrl());
             $q.all([configPromise,cfdDataPromise]).then(response => {
                 let boardConfig = _.first(response).data;
-                let cfdData = _.last(response).data
+                let cfdData = _.last(response).data;
                 data = new BoardData();
                 data.registerCfdApiResponce(cfdData);
+                let issues = Object.keys(data.tickets);
+                //let issueDetailPromise  = self.fetchIssueDetails(issues);
                 data.registerBoardConfig(boardConfig);
                 data.registerjiraUrl(jiraUrl);
+                /*issueDetailPromise.then((responses)=>{
+                    "use strict";
+                    responses.forEach(response=>{
+                        let issues = response.data.issues.map(issue=>{
+                            return {
+                                id: issue.key,
+                                summary: issue.fields.summary,
+                                issueType: issue.fields.issuetype.name,
+                                labels: issue.fields.labels,
+                                epicLink: issue.fields.customfield_11200
+                            }
+                        });
+                        data.registerIssueDetails(issues);
+                        resolve(data);
+                    });
+                }) ;*/
                 resolve(data);
-
-            },()=>reject);
-        })
+            });
+        },()=>reject);
     };
 
-    self.fetchIssueData =(issues)=>{
+    self.fetchIssueDetails =(issues)=>{
+        let promises = [];
+        let batchSize=1000;
+        let batches = Math.ceil(issues.length/batchSize)
+        for(let i =0;i<batches;i++){
+            let start = i*batchSize;
+            let end = ((i+1)*batchSize< issues.length)? (i+1)*batchSize : issues.length;
+            promises.push( $http(
+                jiraUrl.issueDetailsRestApiPostRequest(issues.slice(start,end),["key","summary","issuetype","labels","customfield_11200"])
+            ));
+        }
+
+        return $q.all(promises)
 
     }
 

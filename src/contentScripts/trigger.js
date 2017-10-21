@@ -3,33 +3,40 @@ console.log("CFD_trigger: ");
 function addButton() {
     var button ;
 
-    if($("#trigger-button").length & ($('#subnav-trigger-report').text() != "Cumulative Flow Diagram" & $('#ghx-chart-title').text() != "Cumulative Flow Diagram")){
-        $("#trigger-button").remove();
-        return;
-    }else if($("#trigger-button").length){
+    if($("#trigger-button").length){
         return;
     }
+    console.log("addButton");
+    let query =  $('#ghx-board-name') ? '#ghx-board-name':'#ghx-chart-title';
 
-    console.log("addButton"); 
-    if( identifyCFDPage())/*$('#subnav-trigger-report').length & ($('#subnav-trigger-report').text()==="Cumulative Flow Diagram" 
-      || $('#subnav-title').text()==="Cumulative Flow Diagram"
-      || $('#ghx-chart-title').length & $('#ghx-chart-title').text()==="Cumulative Flow Diagram"  ))*/  {
-        
-        let query =  $('#ghx-view-selector') ? '#ghx-view-selector':'#ghx-chart-title';
-        
-        button = document.createElement('input');
-        button.type = 'button';
-        button.value = "Analyse";
-        button.setAttribute("id","trigger-button");
-        
-        $(query).append(button);
-        $("#trigger-button").click(function(){
-        var jiraUrl = new JiraUrl(window.location);
+    button = document.createElement('input');
+    button.type = 'button';
+    button.value = "Analyse flow";
+    button.setAttribute("id","trigger-button");
+
+    $("#ghx-board-name").append(button);
+    $("#trigger-button").click(function(){
+        var jiraUrl = ( identifyCFDPage())? new JiraUrl(window.location):getReportParametersFromBoard();
         console.log("jiraUrl: " + jiraUrl.cfdApiUrl());
         sendExtensionMessage({"type":"open-data-page","page":jiraUrl});
     });
-        console.log("button Appended");
-    }
+    console.log("button Appended");
+}
+
+function getReportParametersFromBoard(){
+    "use strict";
+    let jiraUrl = new JiraUrl(window.location);
+    jiraUrl.query.column = [];
+
+    $.each($(".ghx-column[data-id]"),function (){
+        jiraUrl.query.column.push($(this).attr('data-id'))
+    });
+    jiraUrl.query.swimlane =[];
+    $.each($(".ghx-swimlane[swimlane-id]"),function (){
+        jiraUrl.query.swimlane.push($(this).attr('swimlane-id'))
+    });
+    return jiraUrl;
+
 }
 
 function identifyCFDPage(){

@@ -166,7 +166,6 @@ app.controller("ThroughputController",
 app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 'boardDataFactory', 'cfdFactory','sharedState', function ($scope, $route, $window, $routeParams, boardDataFactory, cfd,state) {
     $scope.state = state;
     $scope.cfdData = [{"key" : "No data" , "values" : [ [ 0 , 0]]}];
-    //$scope.state.cfdStartTime = $scope.state.cfdStartTime || new Date();
     $scope.hasData = false;
     $scope.startTime = 0;
     $scope.loading = true;
@@ -174,6 +173,8 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
     
     
     console.log("cfdController");
+
+    $scope.iteratonLengths = _.concat(state.iterationLengths,[{label:"Quarter",value:13},{label:"Year",value:52}]);
     $scope.dlFormat = cfd.readableDatesOnCfdData;
 
     function updateCfd() {
@@ -190,7 +191,10 @@ app.controller("CfdController", ['$scope', '$route', '$window', '$routeParams', 
         $scope.loading = false;
     }
 
-    
+    $scope.applyStartTime= function (iterationLength) {
+        $scope.state.cfdStartTime = new Date().getTime()- TimeUtil().MILLISECONDS_DAY*7*iterationLength;
+        updateCfd();
+    }
     
     function getFilterParameters(){
         var parameters = {};
@@ -261,15 +265,11 @@ app.controller("IterationReportController",['$scope', 'boardDataFactory','shared
             let reportData =  boardData.getIterationReport($scope.startTime
                                                           ,$scope.state.sprintLength.value * 7 * timeUtil.MILLISECONDS_DAY
                                                           ,$scope.state.startState);
-            /*if($scope.state.startState){
-                let now = new Date().getTime();
-                let tickets = boardData.getTickets(
-                    ticket => ticket.wasInColumn(now)===$scope.state.startState.name,
-                    ticket => ticket.id
-                )
-                console.log ("Tickets in" + $scope.state.startState.name + JSON.stringify(tickets));
-            }*/
-            
+
+            let issues = reportData.map(item=>item.id||"");
+
+
+
             $scope.reportData = reportData.map(reportHelpers.formatGrid([,timeUtil.isoDateFormat,timeUtil.timeFormat,timeUtil.timeFormat,]));
             $scope.hasData = true;
             $scope.jiraIssues = boardData.jiraUrl.findIssuesByIssueKeys(_.tail(reportData),'id');

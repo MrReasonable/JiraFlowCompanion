@@ -2,7 +2,6 @@ function Url(location){
     //console.log("Url("+JSON.stringify(location) + ")");
     var self = {};
     self.host = location.hostname||location.host;
-    //self.path = location.pathname||location.path;
     self.protocol = location.protocol||location.protocol;
     self.port = location.port;
     self.query = location.query||parseUrlQueryString(location.search);
@@ -39,6 +38,28 @@ function JiraUrl(location){
                               return "?rapidViewId="+query.rapidView[0];
                           });
     }
+
+    url.issueDetailsRestApiGetUrl = function (issues, fields){
+        "use strict";
+        //http://jira1.srv.volvo.com/rest/api/2/search?jql=issueKey%20in%20(TECH-38596)&fields=key,summary,issuetype,labels,status,customfield_11200,customfield_11306
+        return url.rootUrl() + "/rest/api/2/search?jql=" +
+            encodeURIComponent(jql.findIssuesInArray(issues))+
+            "&fields=" + fields ;
+    }
+
+    url.issueDetailsRestApiPostRequest = function (issues, fields){
+        "use strict";
+        return {
+            method:"POST",
+            url:url.rootUrl() + "/rest/api/2/search",
+            data:{
+                "jql":jql.findIssuesInArray(issues),
+                fields: fields,
+                "startAt":0,
+                "maxResults":issues.length
+            }
+        }
+    };
 
     url.hostWithPort= ()=>{
         var port = (url.port)?":"+url.port:"";

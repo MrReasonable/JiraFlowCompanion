@@ -1,7 +1,7 @@
 {
     "name": "Jira flow companion (beta)",
 
-    "version": "0.0.93",
+    "version": "0.0.94",
     "manifest_version": 2,
     
     "icons": { "16": "icn16.png",

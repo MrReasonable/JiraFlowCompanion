@@ -367,15 +367,16 @@ var cfdUtil = {
         return samples;
     },
     readableDatesOnCfdData: function (data) {
-        var copy = _.cloneDeep(data);
-        var index;
-        for (index = 1; index < data.length; index++) {
 
-            if (!isNaN(data[index][0])) {
-                copy[index][0] = timeUtil.isoDateFormat(data[index][0]);
-            }
+        if(data){
+            return  data.map(item=>{
+                if (!isNaN(item[0])) {
+                    item[0] = timeUtil.isoDateFormat(item[0]);
+                }
+                return item;
+            });
         }
-        return copy;
+
     }
 };
 
